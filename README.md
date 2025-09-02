@@ -34,13 +34,13 @@ A comprehensive serial communication solution consisting of two integrated appli
 
 ### One-Line Installation
 ```bash
-curl -sSL https://raw.githubusercontent.com/fragillidae-software/last-bridge/main/deploy/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/CFFinch62/LastBridge/deploy/install.sh | bash
 ```
 
 ### Manual Installation
 ```bash
 # Clone the repository
-git clone https://github.com/fragillidae-software/last-bridge.git
+git clone https://github.com/CFFnch62/LastBridge.git
 cd last-bridge
 
 # Run the installer
