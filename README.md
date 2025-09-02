@@ -34,7 +34,11 @@ A comprehensive serial communication solution consisting of two integrated appli
 
 ### One-Line Installation
 ```bash
+<<<<<<< HEAD
 curl -sSL https://raw.githubusercontent.com/CFFinch62/LastBridge/deploy/install.sh | bash
+=======
+curl -sSL https://raw.githubusercontent.com/CFFinch62/last-bridge/main/deploy/install.sh | bash
+>>>>>>> 592d2a5b88563acb7956d83cd5b3623386ad7804
 ```
 
 ### Manual Installation
