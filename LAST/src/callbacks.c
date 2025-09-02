@@ -28,8 +28,57 @@ void on_refresh_clicked(GtkWidget *widget, gpointer data) {
 }
 
 void on_connection_setting_changed(GtkWidget *widget, gpointer data) {
-    (void)widget;
     SerialTerminal *terminal = (SerialTerminal *)data;
+
+    // Check if this is the port combo and "Custom Path..." was selected
+    if (widget == terminal->port_combo) {
+        const char *selected_port = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(terminal->port_combo));
+        if (selected_port && strcmp(selected_port, "Custom Path...") == 0) {
+            // Show custom path dialog
+            GtkWidget *dialog = gtk_dialog_new_with_buttons("Enter Custom Port Path",
+                GTK_WINDOW(terminal->window),
+                GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                "_OK", GTK_RESPONSE_OK,
+                "_Cancel", GTK_RESPONSE_CANCEL,
+                NULL);
+
+            GtkWidget *entry = gtk_entry_new();
+            gtk_entry_set_text(GTK_ENTRY(entry), "/dev/ttyV0");
+            gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), entry);
+            gtk_widget_show_all(dialog);
+
+            if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK) {
+                const char *custom_path = gtk_entry_get_text(GTK_ENTRY(entry));
+                // Add the custom path to the combo box and select it
+                gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->port_combo), custom_path);
+                // Find and select the newly added item
+                GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(terminal->port_combo));
+                GtkTreeIter iter;
+                gboolean valid = gtk_tree_model_get_iter_first(model, &iter);
+                int index = 0;
+                while (valid) {
+                    gchar *text;
+                    gtk_tree_model_get(model, &iter, 0, &text, -1);
+                    if (strcmp(text, custom_path) == 0) {
+                        gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->port_combo), index);
+                        g_free(text);
+                        break;
+                    }
+                    g_free(text);
+                    valid = gtk_tree_model_iter_next(model, &iter);
+                    index++;
+                }
+            } else {
+                // User cancelled, revert to first item (or previous selection)
+                gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->port_combo), 1); // Skip "Custom Path..." and select first real port
+            }
+            gtk_widget_destroy(dialog);
+            g_free((gchar*)selected_port);
+            return; // Don't call update_settings_from_ui for "Custom Path..." selection
+        }
+        g_free((gchar*)selected_port);
+    }
+
     update_settings_from_ui(terminal);
     save_settings(terminal);
 }
@@ -216,22 +265,25 @@ void on_tools_bridge_activate(GtkWidget *widget, gpointer data) {
 
     // Launch BRIDGE application
     GError *error = NULL;
-    char *bridge_path = "../BRIDGE/bridge";
+    gboolean launched = FALSE;
 
-    // Try to launch BRIDGE from the relative path
-    if (!g_spawn_async(NULL, // working directory (NULL = current)
-                      (char*[]){bridge_path, NULL}, // argv
+    // Strategy 1: Try to launch BRIDGE from system PATH (for installed version)
+    // This will work when both LAST and BRIDGE are installed to /usr/local/bin/
+    if (g_spawn_async(NULL, // working directory (NULL = current)
+                      (char*[]){"bridge", NULL}, // argv - just "bridge" to use PATH
                       NULL, // envp
                       G_SPAWN_SEARCH_PATH, // flags
                       NULL, // child_setup
                       NULL, // user_data
                       NULL, // child_pid
                       &error)) {
-        // If relative path fails, try absolute path
+        launched = TRUE;
+    } else {
+        // Strategy 2: Try relative path (for development environment)
         g_clear_error(&error);
-        bridge_path = g_build_filename(g_get_current_dir(), "..", "BRIDGE", "bridge", NULL);
+        char *bridge_path = "../BRIDGE/bridge";
 
-        if (!g_spawn_async(NULL,
+        if (g_spawn_async(NULL,
                           (char*[]){bridge_path, NULL},
                           NULL,
                           G_SPAWN_SEARCH_PATH,
@@ -239,18 +291,43 @@ void on_tools_bridge_activate(GtkWidget *widget, gpointer data) {
                           NULL,
                           NULL,
                           &error)) {
-            // Show error dialog
-            GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(((SerialTerminal*)data)->window),
-                                                      GTK_DIALOG_MODAL,
-                                                      GTK_MESSAGE_ERROR,
-                                                      GTK_BUTTONS_OK,
-                                                      "Failed to launch BRIDGE application:\n%s",
-                                                      error->message);
-            gtk_dialog_run(GTK_DIALOG(dialog));
-            gtk_widget_destroy(dialog);
+            launched = TRUE;
+        } else {
+            // Strategy 3: Try absolute path from current directory
+            g_clear_error(&error);
+            bridge_path = g_build_filename(g_get_current_dir(), "..", "BRIDGE", "bridge", NULL);
+
+            if (g_spawn_async(NULL,
+                              (char*[]){bridge_path, NULL},
+                              NULL,
+                              G_SPAWN_SEARCH_PATH,
+                              NULL,
+                              NULL,
+                              NULL,
+                              &error)) {
+                launched = TRUE;
+            }
+            g_free(bridge_path);
+        }
+    }
+
+    // If all strategies failed, show error dialog
+    if (!launched) {
+        GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(((SerialTerminal*)data)->window),
+                                                  GTK_DIALOG_MODAL,
+                                                  GTK_MESSAGE_ERROR,
+                                                  GTK_BUTTONS_OK,
+                                                  "Failed to launch BRIDGE application.\n\n"
+                                                  "Please ensure BRIDGE is installed or available in:\n"
+                                                  "• System PATH (if installed)\n"
+                                                  "• ../BRIDGE/bridge (development)\n\n"
+                                                  "Error: %s",
+                                                  error ? error->message : "Unknown error");
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        if (error) {
             g_error_free(error);
         }
-        g_free(bridge_path);
     }
 }
 

@@ -132,27 +132,10 @@ void connect_serial(SerialTerminal *terminal) {
         return;
     }
 
-    // Handle custom path
+    // Check if "Custom Path..." is still selected (shouldn't happen with new callback logic)
     if (strcmp(port, "Custom Path...") == 0) {
-        GtkWidget *dialog = gtk_dialog_new_with_buttons("Enter Custom Port Path",
-            GTK_WINDOW(terminal->window),
-            GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-            "_OK", GTK_RESPONSE_OK,
-            "_Cancel", GTK_RESPONSE_CANCEL,
-            NULL);
-
-        GtkWidget *entry = gtk_entry_new();
-        gtk_entry_set_text(GTK_ENTRY(entry), "/dev/ttyV0");
-        gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), entry);
-        gtk_widget_show_all(dialog);
-
-        if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK) {
-            port = gtk_entry_get_text(GTK_ENTRY(entry));
-        } else {
-            gtk_widget_destroy(dialog);
-            return;
-        }
-        gtk_widget_destroy(dialog);
+        gtk_label_set_text(GTK_LABEL(terminal->status_label), "Please select a valid port or use Custom Path option");
+        return;
     }
 
     // Open serial port
