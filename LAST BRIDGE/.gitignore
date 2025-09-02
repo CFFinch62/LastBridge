@@ -1,0 +1,85 @@
+# Compiled binaries
+LAST/last
+BRIDGE/bridge
+
+# Object files
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+
+# Build artifacts
+LAST/src/*.o
+BRIDGE/src/*.o
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Core dumps
+core
+core.*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Configuration files (user-specific)
+.last_config
+.bridge_config
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Package files
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+
+# Backup files
+*.bak
+*.backup
+
+# Distribution folder (will be created during deployment)
+dist/
+
+# Documentation build artifacts
+docs/_build/
+docs/html/
+docs/latex/
+
+# Test artifacts
+test_results/
+coverage/
+
+# Autotools artifacts
+autom4te.cache/
+config.log
+config.status
+configure
+Makefile.in
+aclocal.m4
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Debian packaging
+debian/files
+debian/*.log
+debian/*.substvars
+debian/tmp/
