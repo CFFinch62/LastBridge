@@ -1,8 +1,8 @@
 # LAST BRIDGE
 
-[![CI/CD Pipeline](https://github.com/fragillidae-software/last-bridge/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/fragillidae-software/last-bridge/actions)
+[![CI/CD Pipeline](https://github.com/CFFinch62/LastBridge/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/CFFinch62/LastBridge/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub release](https://img.shields.io/github/release/fragillidae-software/last-bridge.svg)](https://github.com/fragillidae-software/last-bridge/releases)
+[![GitHub release](https://img.shields.io/github/release/CFFinch62/LastBridge.svg)](https://github.com/CFFinch62/LastBridge/releases)
 
 A comprehensive serial communication solution consisting of two integrated applications:
 
@@ -34,18 +34,14 @@ A comprehensive serial communication solution consisting of two integrated appli
 
 ### One-Line Installation
 ```bash
-<<<<<<< HEAD
-curl -sSL https://raw.githubusercontent.com/CFFinch62/LastBridge/deploy/install.sh | bash
-=======
-curl -sSL https://raw.githubusercontent.com/CFFinch62/last-bridge/main/deploy/install.sh | bash
->>>>>>> 592d2a5b88563acb7956d83cd5b3623386ad7804
+curl -sSL https://raw.githubusercontent.com/CFFinch62/LastBridge/main/deploy/install.sh | bash
 ```
 
 ### Manual Installation
 ```bash
 # Clone the repository
-git clone https://github.com/CFFnch62/LastBridge.git
-cd last-bridge
+git clone https://github.com/CFFinch62/LastBridge.git
+cd LastBridge
 
 # Run the installer
 ./deploy/install.sh
@@ -93,22 +89,22 @@ make
 ### Automatic Installation (Recommended)
 ```bash
 # Download and run installer
-curl -sSL https://raw.githubusercontent.com/fragillidae-software/last-bridge/main/deploy/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/CFFinch62/LastBridge/main/deploy/install.sh | bash
 
 # Or clone and install
-git clone https://github.com/fragillidae-software/last-bridge.git
-cd last-bridge
+git clone https://github.com/CFFinch62/LastBridge.git
+cd LastBridge
 ./deploy/install.sh
 ```
 
 ### Package Installation
 ```bash
 # Download release package
-wget https://github.com/fragillidae-software/last-bridge/releases/latest/download/last-bridge-1.0.0.tar.gz
+wget https://github.com/CFFinch62/LastBridge/releases/latest/download/LastBridge-1.0.0.tar.gz
 
 # Extract and install
-tar -xzf last-bridge-1.0.0.tar.gz
-cd last-bridge-1.0.0
+tar -xzf LastBridge-1.0.0.tar.gz
+cd LastBridge-1.0.0
 ./deploy/install.sh
 ```
 
@@ -192,14 +188,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/fragillidae-software/last-bridge/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/fragillidae-software/last-bridge/discussions)
-- **Email**: fragillidae.software@example.com
+- **Issues**: [GitHub Issues](https://github.com/CFFinch62/LastBridge/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/CFFinch62/LastBridge/discussions)
+- **Email**: cffinch62@example.com
 
 ## 🔗 Links
 
-- **Documentation**: [Wiki](https://github.com/fragillidae-software/last-bridge/wiki)
-- **Releases**: [GitHub Releases](https://github.com/fragillidae-software/last-bridge/releases)
+- **Documentation**: [Wiki](https://github.com/CFFinch62/LastBridge/wiki)
+- **Releases**: [GitHub Releases](https://github.com/CFFinch62/LastBridge/releases)
 - **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 
 ---
