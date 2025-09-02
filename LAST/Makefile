@@ -36,10 +36,16 @@ clean:
 install: $(TARGET)
 	sudo cp $(TARGET) /usr/local/bin/
 	sudo chmod +x /usr/local/bin/$(TARGET)
+	sudo mkdir -p /usr/local/share/pixmaps
+	sudo cp last-icon.png /usr/local/share/pixmaps/ 2>/dev/null || true
+	sudo cp last-icon.jpg /usr/local/share/pixmaps/ 2>/dev/null || true
 	@echo "Installed to /usr/local/bin/$(TARGET)"
+	@echo "Icons installed to /usr/local/share/pixmaps/"
 
 uninstall:
 	sudo rm -f /usr/local/bin/$(TARGET)
+	sudo rm -f /usr/local/share/pixmaps/last-icon.png
+	sudo rm -f /usr/local/share/pixmaps/last-icon.jpg
 	@echo "Uninstalled $(TARGET)"
 
 run: $(TARGET)

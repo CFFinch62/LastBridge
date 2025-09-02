@@ -13,15 +13,36 @@ void create_main_window(BridgeApp *app) {
     gtk_window_set_default_size(GTK_WINDOW(app->window), 600, 500);
     gtk_window_set_position(GTK_WINDOW(app->window), GTK_WIN_POS_CENTER);
 
-    // Set window icon
+    // Set window icon - try multiple approaches
+    GdkPixbuf *icon = NULL;
     GError *error = NULL;
-    GdkPixbuf *icon = gdk_pixbuf_new_from_file("bridge-icon.jpg", &error);
-    if (icon) {
-        gtk_window_set_icon(GTK_WINDOW(app->window), icon);
-        g_object_unref(icon);
-    } else if (error) {
-        g_warning("Failed to load icon: %s", error->message);
-        g_error_free(error);
+
+    // Try loading PNG icon first (smaller, better for window icons)
+    const char *icon_paths[] = {
+        "bridge-icon.png",                           // Current directory (PNG)
+        "bridge-icon.jpg",                           // Current directory (JPG fallback)
+        "/usr/local/share/pixmaps/bridge-icon.png",  // System location (PNG)
+        "/usr/local/share/pixmaps/bridge-icon.jpg",  // System location (JPG fallback)
+        "/usr/share/pixmaps/bridge-icon.png",        // Alternative system location (PNG)
+        "/usr/share/pixmaps/bridge-icon.jpg",        // Alternative system location (JPG fallback)
+        NULL
+    };
+
+    for (int i = 0; icon_paths[i] != NULL && !icon; i++) {
+        error = NULL;
+        icon = gdk_pixbuf_new_from_file(icon_paths[i], &error);
+        if (icon) {
+            // Scale icon to appropriate size for window decoration
+            GdkPixbuf *scaled_icon = gdk_pixbuf_scale_simple(icon, 48, 48, GDK_INTERP_BILINEAR);
+            if (scaled_icon) {
+                gtk_window_set_icon(GTK_WINDOW(app->window), scaled_icon);
+                g_object_unref(scaled_icon);
+            }
+            g_object_unref(icon);
+            break;
+        } else if (error) {
+            g_error_free(error);
+        }
     }
 
     // Create main vertical box

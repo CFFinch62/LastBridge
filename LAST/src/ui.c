@@ -12,15 +12,36 @@ void create_main_interface(SerialTerminal *terminal) {
     gtk_window_set_title(GTK_WINDOW(terminal->window), "LAST - Linux Advanced Serial Transceiver");
     gtk_window_set_default_size(GTK_WINDOW(terminal->window), 1190, 600); // Adjusted for 20px borders on both sides
 
-    // Set window icon
+    // Set window icon - try multiple approaches
+    GdkPixbuf *icon = NULL;
     GError *error = NULL;
-    GdkPixbuf *icon = gdk_pixbuf_new_from_file("last-icon.jpg", &error);
-    if (icon) {
-        gtk_window_set_icon(GTK_WINDOW(terminal->window), icon);
-        g_object_unref(icon);
-    } else if (error) {
-        g_warning("Failed to load icon: %s", error->message);
-        g_error_free(error);
+
+    // Try loading PNG icon first (smaller, better for window icons)
+    const char *icon_paths[] = {
+        "last-icon.png",                           // Current directory (PNG)
+        "last-icon.jpg",                           // Current directory (JPG fallback)
+        "/usr/local/share/pixmaps/last-icon.png",  // System location (PNG)
+        "/usr/local/share/pixmaps/last-icon.jpg",  // System location (JPG fallback)
+        "/usr/share/pixmaps/last-icon.png",        // Alternative system location (PNG)
+        "/usr/share/pixmaps/last-icon.jpg",        // Alternative system location (JPG fallback)
+        NULL
+    };
+
+    for (int i = 0; icon_paths[i] != NULL && !icon; i++) {
+        error = NULL;
+        icon = gdk_pixbuf_new_from_file(icon_paths[i], &error);
+        if (icon) {
+            // Scale icon to appropriate size for window decoration
+            GdkPixbuf *scaled_icon = gdk_pixbuf_scale_simple(icon, 48, 48, GDK_INTERP_BILINEAR);
+            if (scaled_icon) {
+                gtk_window_set_icon(GTK_WINDOW(terminal->window), scaled_icon);
+                g_object_unref(scaled_icon);
+            }
+            g_object_unref(icon);
+            break;
+        } else if (error) {
+            g_error_free(error);
+        }
     }
 
     // Create main container
