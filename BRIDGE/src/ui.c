@@ -13,6 +13,17 @@ void create_main_window(BridgeApp *app) {
     gtk_window_set_default_size(GTK_WINDOW(app->window), 600, 500);
     gtk_window_set_position(GTK_WINDOW(app->window), GTK_WIN_POS_CENTER);
 
+    // Set window icon
+    GError *error = NULL;
+    GdkPixbuf *icon = gdk_pixbuf_new_from_file("bridge-icon.jpg", &error);
+    if (icon) {
+        gtk_window_set_icon(GTK_WINDOW(app->window), icon);
+        g_object_unref(icon);
+    } else if (error) {
+        g_warning("Failed to load icon: %s", error->message);
+        g_error_free(error);
+    }
+
     // Create main vertical box
     app->main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_container_add(GTK_CONTAINER(app->window), app->main_vbox);

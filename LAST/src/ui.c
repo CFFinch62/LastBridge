@@ -12,6 +12,17 @@ void create_main_interface(SerialTerminal *terminal) {
     gtk_window_set_title(GTK_WINDOW(terminal->window), "LAST - Linux Advanced Serial Transceiver");
     gtk_window_set_default_size(GTK_WINDOW(terminal->window), 1190, 600); // Adjusted for 20px borders on both sides
 
+    // Set window icon
+    GError *error = NULL;
+    GdkPixbuf *icon = gdk_pixbuf_new_from_file("last-icon.jpg", &error);
+    if (icon) {
+        gtk_window_set_icon(GTK_WINDOW(terminal->window), icon);
+        g_object_unref(icon);
+    } else if (error) {
+        g_warning("Failed to load icon: %s", error->message);
+        g_error_free(error);
+    }
+
     // Create main container
     GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_container_add(GTK_CONTAINER(terminal->window), main_vbox);
