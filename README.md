@@ -34,7 +34,7 @@ A comprehensive serial communication solution consisting of two integrated appli
 
 ### One-Line Installation
 ```bash
-curl -sSL https://raw.githubusercontent.com/fragillidae-software/last-bridge/main/deploy/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/CFFinch62/last-bridge/main/deploy/install.sh | bash
 ```
 
 ### Manual Installation
