@@ -62,6 +62,7 @@ typedef struct {
 
     // Display options
     GtkWidget *hex_display_check;
+    GtkWidget *hex_bytes_per_line_combo;
     GtkWidget *timestamp_check;
     GtkWidget *autoscroll_check;
     GtkWidget *local_echo_check;
@@ -104,6 +105,7 @@ typedef struct {
 
     // Settings
     gboolean hex_display;
+    int hex_bytes_per_line;
     gboolean show_timestamps;
     gboolean autoscroll;
     gboolean local_echo;

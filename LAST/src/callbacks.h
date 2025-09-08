@@ -34,6 +34,7 @@ void on_break_clicked(GtkWidget *widget, gpointer data);
 
 // Display option callbacks
 void on_hex_display_toggled(GtkWidget *widget, gpointer data);
+void on_hex_bytes_per_line_changed(GtkWidget *widget, gpointer data);
 void on_timestamp_toggled(GtkWidget *widget, gpointer data);
 void on_autoscroll_toggled(GtkWidget *widget, gpointer data);
 void on_local_echo_toggled(GtkWidget *widget, gpointer data);

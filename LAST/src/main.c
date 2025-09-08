@@ -22,6 +22,7 @@ int main(int argc, char *argv[]) {
 
     // Initialize settings
     terminal.hex_display = FALSE;
+    terminal.hex_bytes_per_line = 0;  // 0 = Auto mode (CR+LF detection)
     terminal.show_timestamps = FALSE;
     terminal.autoscroll = TRUE;
     terminal.local_echo = FALSE;

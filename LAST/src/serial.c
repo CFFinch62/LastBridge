@@ -238,21 +238,21 @@ void *read_thread_func(void *arg) {
         if (result > 0 && FD_ISSET(terminal->serial_fd, &readfds)) {
             ssize_t bytes_read = read(terminal->serial_fd, buffer, sizeof(buffer) - 1);
             if (bytes_read > 0) {
-                buffer[bytes_read] = '\0';
-
                 // Update statistics
                 terminal->bytes_received += bytes_read;
 
                 // Log to file if enabled
                 if (terminal->log_file) {
                     char *timestamp = get_current_timestamp();
+                    // For file logging, null-terminate for text output
+                    buffer[bytes_read] = '\0';
                     fprintf(terminal->log_file, "[%s] RX: %s", timestamp, buffer);
                     fflush(terminal->log_file);
                     free(timestamp);
                 }
 
-                // Format data for display
-                char *display_data = format_data_for_display(buffer, terminal->hex_display);
+                // Format data for display - pass actual byte count to preserve all data
+                char *display_data = format_data_for_display(buffer, bytes_read, terminal->hex_display);
                 g_idle_add(append_to_receive_text_idle, display_data);
             }
         }
@@ -277,7 +277,18 @@ gboolean append_to_receive_text_idle(gpointer data) {
         }
 
         gtk_text_buffer_insert(buffer, &end, text, -1);
-        gtk_text_buffer_insert(buffer, &end, "\n", -1);
+
+        // In hex display mode, don't add extra newlines - show exactly what was received
+        // In text mode, only add newline if the text doesn't already end with one
+        if (!g_terminal->hex_display) {
+            size_t text_len = strlen(text);
+            if (text_len == 0 || text[text_len - 1] != '\n') {
+                gtk_text_buffer_insert(buffer, &end, "\n", -1);
+            }
+        } else {
+            // In hex mode, don't add any extra newlines - show raw hex data only
+            // Each received data chunk will be displayed as continuous hex without modification
+        }
 
         // Auto-scroll to bottom if enabled
         if (g_terminal->autoscroll) {
@@ -361,9 +372,16 @@ void apply_serial_settings(SerialTerminal *terminal) {
         tio.c_iflag &= ~(IXON | IXOFF | IXANY);
     }
 
-    // Raw mode
+    // Raw mode - disable all input/output processing to preserve exact bytes
     tio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
     tio.c_oflag &= ~OPOST;
+
+    // Disable input processing to preserve CR characters and all other bytes exactly
+    tio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
+
+    // Set raw input mode
+    tio.c_cc[VMIN] = 0;   // Non-blocking read
+    tio.c_cc[VTIME] = 1;  // 0.1 second timeout
 
     tcsetattr(terminal->serial_fd, TCSANOW, &tio);
 }

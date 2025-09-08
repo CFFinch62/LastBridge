@@ -200,6 +200,20 @@ void create_display_options_panel(SerialTerminal *terminal, GtkWidget *parent) {
     terminal->hex_display_check = gtk_check_button_new_with_label("Hex Display");
     gtk_box_pack_start(GTK_BOX(vbox), terminal->hex_display_check, FALSE, FALSE, 0);
 
+    // Hex bytes per line control
+    GtkWidget *hex_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(vbox), hex_hbox, FALSE, FALSE, 0);
+
+    gtk_box_pack_start(GTK_BOX(hex_hbox), gtk_label_new("Hex Bytes/Line:"), FALSE, FALSE, 0);
+    terminal->hex_bytes_per_line_combo = gtk_combo_box_text_new();
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "Auto (CR+LF)");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "8");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "16");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "32");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "64");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->hex_bytes_per_line_combo), 0); // Auto (CR+LF)
+    gtk_box_pack_start(GTK_BOX(hex_hbox), terminal->hex_bytes_per_line_combo, TRUE, TRUE, 0);
+
     terminal->timestamp_check = gtk_check_button_new_with_label("Show Timestamps");
     gtk_box_pack_start(GTK_BOX(vbox), terminal->timestamp_check, FALSE, FALSE, 0);
 

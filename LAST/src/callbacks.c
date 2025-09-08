@@ -145,6 +145,20 @@ void on_hex_display_toggled(GtkWidget *widget, gpointer data) {
     save_settings(terminal);
 }
 
+void on_hex_bytes_per_line_changed(GtkWidget *widget, gpointer data) {
+    SerialTerminal *terminal = (SerialTerminal *)data;
+    const char *selection = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget));
+
+    if (strcmp(selection, "Auto (CR+LF)") == 0) {
+        terminal->hex_bytes_per_line = 0;  // 0 means auto mode (CR+LF detection)
+    } else {
+        terminal->hex_bytes_per_line = atoi(selection);  // Convert string to int
+    }
+
+    update_settings_from_ui(terminal);
+    save_settings(terminal);
+}
+
 void on_timestamp_toggled(GtkWidget *widget, gpointer data) {
     SerialTerminal *terminal = (SerialTerminal *)data;
     terminal->show_timestamps = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
@@ -417,6 +431,7 @@ void connect_signals(SerialTerminal *terminal) {
 
     // Display option signals
     g_signal_connect(terminal->hex_display_check, "toggled", G_CALLBACK(on_hex_display_toggled), terminal);
+    g_signal_connect(terminal->hex_bytes_per_line_combo, "changed", G_CALLBACK(on_hex_bytes_per_line_changed), terminal);
     g_signal_connect(terminal->timestamp_check, "toggled", G_CALLBACK(on_timestamp_toggled), terminal);
     g_signal_connect(terminal->autoscroll_check, "toggled", G_CALLBACK(on_autoscroll_toggled), terminal);
     g_signal_connect(terminal->local_echo_check, "toggled", G_CALLBACK(on_local_echo_toggled), terminal);

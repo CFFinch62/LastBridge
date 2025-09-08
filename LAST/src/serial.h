@@ -5,7 +5,7 @@
 
 // Forward declarations for functions from other modules
 char* get_current_timestamp(void);
-char* format_data_for_display(const char *data, gboolean hex_mode);
+char* format_data_for_display(const char *data, size_t data_len, gboolean hex_mode);
 void stop_repeat_file_sending(SerialTerminal *terminal);
 
 /*

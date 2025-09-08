@@ -67,6 +67,8 @@ void load_settings(SerialTerminal *terminal) {
             // Display options
             else if (strcmp(key, "hex_display") == 0) {
                 terminal->hex_display = (strcmp(value, "true") == 0);
+            } else if (strcmp(key, "hex_bytes_per_line") == 0) {
+                terminal->hex_bytes_per_line = atoi(value);
             } else if (strcmp(key, "show_timestamps") == 0) {
                 terminal->show_timestamps = (strcmp(value, "true") == 0);
             } else if (strcmp(key, "autoscroll") == 0) {
@@ -128,6 +130,7 @@ void save_settings(SerialTerminal *terminal) {
     // Display options
     fprintf(file, "[Display]\n");
     fprintf(file, "hex_display=%s\n", terminal->hex_display ? "true" : "false");
+    fprintf(file, "hex_bytes_per_line=%d\n", terminal->hex_bytes_per_line);
     fprintf(file, "show_timestamps=%s\n", terminal->show_timestamps ? "true" : "false");
     fprintf(file, "autoscroll=%s\n", terminal->autoscroll ? "true" : "false");
     fprintf(file, "local_echo=%s\n", terminal->local_echo ? "true" : "false");
@@ -208,6 +211,22 @@ void apply_loaded_settings(SerialTerminal *terminal) {
     // Apply display settings
     if (terminal->hex_display_check) {
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(terminal->hex_display_check), terminal->hex_display);
+    }
+    if (terminal->hex_bytes_per_line_combo) {
+        // Set the combo box based on the saved value
+        if (terminal->hex_bytes_per_line == 0) {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->hex_bytes_per_line_combo), 0); // Auto (CR+LF)
+        } else if (terminal->hex_bytes_per_line == 8) {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->hex_bytes_per_line_combo), 1);
+        } else if (terminal->hex_bytes_per_line == 16) {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->hex_bytes_per_line_combo), 2);
+        } else if (terminal->hex_bytes_per_line == 32) {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->hex_bytes_per_line_combo), 3);
+        } else if (terminal->hex_bytes_per_line == 64) {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->hex_bytes_per_line_combo), 4);
+        } else {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->hex_bytes_per_line_combo), 0); // Default to Auto
+        }
     }
     if (terminal->timestamp_check) {
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(terminal->timestamp_check), terminal->show_timestamps);
@@ -334,6 +353,16 @@ void update_settings_from_ui(SerialTerminal *terminal) {
     // Update display settings from UI
     if (terminal->hex_display_check) {
         terminal->hex_display = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(terminal->hex_display_check));
+    }
+    if (terminal->hex_bytes_per_line_combo) {
+        const char *selection = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo));
+        if (selection) {
+            if (strcmp(selection, "Auto (CR+LF)") == 0) {
+                terminal->hex_bytes_per_line = 0;
+            } else {
+                terminal->hex_bytes_per_line = atoi(selection);
+            }
+        }
     }
     if (terminal->timestamp_check) {
         terminal->show_timestamps = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(terminal->timestamp_check));

@@ -9,7 +9,7 @@
  */
 
 // Data formatting functions
-char* format_data_for_display(const char *data, gboolean hex_mode);
+char* format_data_for_display(const char *data, size_t data_len, gboolean hex_mode);
 char* get_current_timestamp(void);
 
 // Statistics functions
