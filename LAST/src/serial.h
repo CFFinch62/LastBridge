@@ -31,6 +31,7 @@ void *read_thread_func(void *arg);
 // Text display functions
 void append_to_receive_text(SerialTerminal *terminal, const char *text, gboolean is_received);
 gboolean append_to_receive_text_idle(gpointer data);
+gboolean append_to_dual_display_idle(gpointer data);
 
 // Control signal functions
 void set_control_signals(SerialTerminal *terminal);

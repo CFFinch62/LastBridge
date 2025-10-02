@@ -18,9 +18,11 @@ A full-featured serial terminal application built from the working low-level ser
 - ✅ **Flow control**: None, Hardware (RTS/CTS), Software (XON/XOFF)
 
 ### **Advanced Display Features**
-- ✅ **Hex display mode** - view data in hexadecimal format
-- ✅ **Timestamps** - add timestamps to all received data
-- ✅ **Auto-scroll** - automatically scroll to show latest data
+- ✅ **Dual display mode** - simultaneous text and hex data display 🆕
+- ✅ **Hex display mode** - view data in hexadecimal format with configurable bytes per line
+- ✅ **Dynamic layout** - hex display toggles on/off with automatic window resizing
+- ✅ **Timestamps** - add timestamps to all received data (both displays)
+- ✅ **Auto-scroll** - automatically scroll to show latest data (both displays)
 - ✅ **Local echo** - echo sent data in receive area
 - ✅ **Line ending control** - None, CR, LF, CR+LF
 
@@ -78,7 +80,8 @@ The build system automatically:
 - **Control Signals**: DTR, RTS, break signal
 
 ### **Right Panel - Data**
-- **Receive Area**: Large scrollable text area for received data
+- **Received Data Area**: Scrollable text area for received data in text format
+- **Hex Data Area**: Scrollable hex display (shown by default, toggleable)
 - **Send Area**: Text entry and send button for outgoing data
 
 ### **Status Bar**
@@ -86,6 +89,26 @@ The build system automatically:
 - **Statistics**: Bytes sent/received, connection time
 
 ## 🔧 **Advanced Features**
+
+### **Dual Text/Hex Display** 🆕
+Experience simultaneous text and hex data visualization:
+
+1. **Default Layout** - Both text and hex displays are shown by default
+2. **Synchronized Data** - All received data appears in both formats simultaneously
+3. **Toggle Control** - Use View → Display Options → "Hex Display" to show/hide hex area
+4. **Dynamic Resizing** - Text area automatically adjusts height when hex display is toggled
+5. **Consistent Styling** - Both displays share the same fonts, colors, and appearance settings
+6. **Unified Operations** - Clear and Save functions work on both displays
+
+**Layout Behavior:**
+- **Hex Display ON**: Text area (120px) + Hex area (120px) = Split view
+- **Hex Display OFF**: Text area (240px) = Full height view
+
+**Use Cases:**
+- **Protocol Analysis** - See both human-readable text and raw hex data
+- **Binary Data Inspection** - Examine non-printable characters in hex format
+- **Debugging** - Compare expected vs actual data in both formats
+- **Data Validation** - Verify data integrity across different representations
 
 ### **Repeat File Sending** 🆕
 Perfect for testing and simulation scenarios:
@@ -125,6 +148,8 @@ Perfect for testing and simulation scenarios:
 | Custom paths | ❌ | ❌ | ✅ |
 | Full parameter control | ✅ | ✅ | ✅ |
 | Hex display | ✅ | ✅ | ✅ |
+| **Dual text/hex display** | ❌ | ❌ | ✅ 🆕 |
+| **Dynamic layout** | ❌ | ❌ | ✅ 🆕 |
 | Timestamps | ❌ | ✅ | ✅ |
 | File operations | ✅ | ✅ | ✅ |
 | **Repeat file sending** | ❌ | ❌ | ✅ 🆕 |

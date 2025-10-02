@@ -14,7 +14,7 @@ A comprehensive serial communication solution consisting of two integrated appli
 ### LAST - Linux Advanced Serial Transceiver
 - 🔍 **Advanced Port Detection** - Overcomes Linux limitations with comprehensive scanning
 - ⚙️ **Complete Serial Control** - All parameters: baud rate, data bits, parity, stop bits
-- 📊 **Hex Display Mode** - View data in hexadecimal format with timestamps
+- 📊 **Dual Display Mode** - Simultaneous text and hex data visualization with dynamic layout
 - 📁 **File Operations** - Send files and save received data
 - 📈 **Real-time Statistics** - Data counters, connection time, error tracking
 - 🎛️ **Control Signals** - DTR, RTS, Break signal management

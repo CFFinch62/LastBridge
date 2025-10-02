@@ -56,6 +56,9 @@ typedef struct {
 
     // Data handling
     GtkWidget *receive_text;
+    GtkWidget *hex_text;  // New hex display text view
+    GtkWidget *hex_frame; // Frame containing hex display area
+    GtkWidget *hex_scrolled; // Scrolled window for hex display
     GtkWidget *send_entry;
     GtkWidget *send_button;
     GtkWidget *clear_button;
@@ -146,5 +149,12 @@ typedef struct {
     char *text;
     gboolean is_received;
 } IdleCallbackData;
+
+// Data structure for dual display idle callback
+typedef struct {
+    char *text_data;
+    char *hex_data;
+    gboolean show_hex;
+} DualDisplayData;
 
 #endif // COMMON_H

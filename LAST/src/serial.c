@@ -251,9 +251,12 @@ void *read_thread_func(void *arg) {
                     free(timestamp);
                 }
 
-                // Format data for display - pass actual byte count to preserve all data
-                char *display_data = format_data_for_display(buffer, bytes_read, terminal->hex_display);
-                g_idle_add(append_to_receive_text_idle, display_data);
+                // Create dual display data structure
+                DualDisplayData *dual_data = malloc(sizeof(DualDisplayData));
+                dual_data->text_data = format_data_for_display(buffer, bytes_read, FALSE); // Always format as text
+                dual_data->hex_data = format_data_for_display(buffer, bytes_read, TRUE);   // Always format as hex
+                dual_data->show_hex = terminal->hex_display;
+                g_idle_add(append_to_dual_display_idle, dual_data);
             }
         }
     }
@@ -297,6 +300,69 @@ gboolean append_to_receive_text_idle(gpointer data) {
         }
     }
     g_free(text);
+    return FALSE;
+}
+
+gboolean append_to_dual_display_idle(gpointer data) {
+    DualDisplayData *dual_data = (DualDisplayData *)data;
+    if (g_terminal) {
+        // Always update text display
+        GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(g_terminal->receive_text));
+        GtkTextIter text_end;
+        gtk_text_buffer_get_end_iter(text_buffer, &text_end);
+
+        // Add timestamp to text display if enabled
+        if (g_terminal->show_timestamps) {
+            char *timestamp = get_current_timestamp();
+            gtk_text_buffer_insert(text_buffer, &text_end, timestamp, -1);
+            gtk_text_buffer_insert(text_buffer, &text_end, " ", -1);
+            free(timestamp);
+        }
+
+        // Insert text data
+        gtk_text_buffer_insert(text_buffer, &text_end, dual_data->text_data, -1);
+
+        // Add newline for text display if needed
+        size_t text_len = strlen(dual_data->text_data);
+        if (text_len == 0 || dual_data->text_data[text_len - 1] != '\n') {
+            gtk_text_buffer_insert(text_buffer, &text_end, "\n", -1);
+        }
+
+        // Update hex display if hex mode is enabled and hex display exists
+        if (dual_data->show_hex && g_terminal->hex_text) {
+            GtkTextBuffer *hex_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(g_terminal->hex_text));
+            GtkTextIter hex_end;
+            gtk_text_buffer_get_end_iter(hex_buffer, &hex_end);
+
+            // Add timestamp to hex display if enabled
+            if (g_terminal->show_timestamps) {
+                char *timestamp = get_current_timestamp();
+                gtk_text_buffer_insert(hex_buffer, &hex_end, timestamp, -1);
+                gtk_text_buffer_insert(hex_buffer, &hex_end, " ", -1);
+                free(timestamp);
+            }
+
+            // Insert hex data
+            gtk_text_buffer_insert(hex_buffer, &hex_end, dual_data->hex_data, -1);
+        }
+
+        // Auto-scroll both displays if enabled
+        if (g_terminal->autoscroll) {
+            GtkTextMark *text_mark = gtk_text_buffer_get_insert(text_buffer);
+            gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(g_terminal->receive_text), text_mark);
+
+            if (dual_data->show_hex && g_terminal->hex_text) {
+                GtkTextBuffer *hex_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(g_terminal->hex_text));
+                GtkTextMark *hex_mark = gtk_text_buffer_get_insert(hex_buffer);
+                gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(g_terminal->hex_text), hex_mark);
+            }
+        }
+    }
+
+    // Free the data
+    free(dual_data->text_data);
+    free(dual_data->hex_data);
+    free(dual_data);
     return FALSE;
 }
 

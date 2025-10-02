@@ -8,8 +8,15 @@
 #include "utils.h"
 
 void clear_receive_area(SerialTerminal *terminal) {
-    GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->receive_text));
-    gtk_text_buffer_set_text(buffer, "", -1);
+    // Clear text display
+    GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->receive_text));
+    gtk_text_buffer_set_text(text_buffer, "", -1);
+
+    // Clear hex display if it exists
+    if (terminal->hex_text) {
+        GtkTextBuffer *hex_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->hex_text));
+        gtk_text_buffer_set_text(hex_buffer, "", -1);
+    }
 }
 
 void save_received_data(SerialTerminal *terminal) {
@@ -25,14 +32,33 @@ void save_received_data(SerialTerminal *terminal) {
     if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
         char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 
-        GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->receive_text));
+        // Get text data
+        GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->receive_text));
         GtkTextIter start, end;
-        gtk_text_buffer_get_bounds(buffer, &start, &end);
-        char *text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+        gtk_text_buffer_get_bounds(text_buffer, &start, &end);
+        char *text_data = gtk_text_buffer_get_text(text_buffer, &start, &end, FALSE);
 
         FILE *file = fopen(filename, "w");
         if (file) {
-            fprintf(file, "%s", text);
+            // Always save text data
+            fprintf(file, "=== TEXT DATA ===\n");
+            fprintf(file, "%s", text_data);
+
+            // If hex display is enabled and has data, save hex data too
+            if (terminal->hex_display && terminal->hex_text) {
+                GtkTextBuffer *hex_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->hex_text));
+                GtkTextIter hex_start, hex_end;
+                gtk_text_buffer_get_bounds(hex_buffer, &hex_start, &hex_end);
+                char *hex_data = gtk_text_buffer_get_text(hex_buffer, &hex_start, &hex_end, FALSE);
+
+                if (strlen(hex_data) > 0) {
+                    fprintf(file, "\n\n=== HEX DATA ===\n");
+                    fprintf(file, "%s", hex_data);
+                }
+
+                g_free(hex_data);
+            }
+
             fclose(file);
 
             char status_msg[512];
@@ -40,7 +66,7 @@ void save_received_data(SerialTerminal *terminal) {
             gtk_label_set_text(GTK_LABEL(terminal->status_label), status_msg);
         }
 
-        g_free(text);
+        g_free(text_data);
         g_free(filename);
     }
 

@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     g_terminal = &terminal;
 
     // Initialize settings
-    terminal.hex_display = FALSE;
+    terminal.hex_display = TRUE;  // Default to showing hex display
     terminal.hex_bytes_per_line = 0;  // 0 = Auto mode (CR+LF detection)
     terminal.show_timestamps = FALSE;
     terminal.autoscroll = TRUE;

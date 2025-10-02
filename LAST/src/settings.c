@@ -211,6 +211,19 @@ void apply_loaded_settings(SerialTerminal *terminal) {
     // Apply display settings
     if (terminal->hex_display_check) {
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(terminal->hex_display_check), terminal->hex_display);
+
+        // Apply hex display visibility based on loaded setting
+        if (terminal->hex_display && terminal->hex_frame) {
+            // Hex display should be shown (default state)
+            gtk_widget_show(terminal->hex_frame);
+            // Text area height is already set to 120 by default
+            gtk_widget_set_size_request(gtk_widget_get_parent(terminal->receive_text), -1, 120);
+        } else if (terminal->hex_frame) {
+            // Hide hex display if setting is disabled
+            gtk_widget_hide(terminal->hex_frame);
+            // Restore text area to full height
+            gtk_widget_set_size_request(gtk_widget_get_parent(terminal->receive_text), -1, 240);
+        }
     }
     if (terminal->hex_bytes_per_line_combo) {
         // Set the combo box based on the saved value

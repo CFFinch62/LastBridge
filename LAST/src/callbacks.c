@@ -141,6 +141,20 @@ void on_break_clicked(GtkWidget *widget, gpointer data) {
 void on_hex_display_toggled(GtkWidget *widget, gpointer data) {
     SerialTerminal *terminal = (SerialTerminal *)data;
     terminal->hex_display = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+
+    // Show/hide hex display area and adjust text area size
+    if (terminal->hex_display && terminal->hex_frame) {
+        // Show hex display
+        gtk_widget_show(terminal->hex_frame);
+        // Reduce text area height to make room for hex display
+        gtk_widget_set_size_request(gtk_widget_get_parent(terminal->receive_text), -1, 120);
+    } else if (terminal->hex_frame) {
+        // Hide hex display
+        gtk_widget_hide(terminal->hex_frame);
+        // Restore text area to full height
+        gtk_widget_set_size_request(gtk_widget_get_parent(terminal->receive_text), -1, 240);
+    }
+
     update_settings_from_ui(terminal);
     save_settings(terminal);
 }

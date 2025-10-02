@@ -403,8 +403,8 @@ void create_data_area(SerialTerminal *terminal, GtkWidget *parent) {
     // Enable both vertical and horizontal scroll bars
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
                                    GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
-    // Set height for receive area to fit within laptop screen constraints
-    gtk_widget_set_size_request(scrolled, -1, 240); // Reduced to 240 to accommodate smaller window height
+    // Set height for receive area - default to half height since hex display is shown by default
+    gtk_widget_set_size_request(scrolled, -1, 120); // Half height when hex is shown
     gtk_box_pack_start(GTK_BOX(receive_vbox), scrolled, TRUE, TRUE, 0);
 
     terminal->receive_text = gtk_text_view_new();
@@ -413,6 +413,31 @@ void create_data_area(SerialTerminal *terminal, GtkWidget *parent) {
     // Disable text wrapping to enable horizontal scrolling
     gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(terminal->receive_text), GTK_WRAP_NONE);
     gtk_container_add(GTK_CONTAINER(scrolled), terminal->receive_text);
+
+    // Create hex display area (shown by default)
+    terminal->hex_frame = gtk_frame_new("Hex Data");
+    gtk_box_pack_start(GTK_BOX(parent), terminal->hex_frame, TRUE, TRUE, 0);
+    // Hex display is shown by default, but can be hidden via toggle
+
+    GtkWidget *hex_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_container_add(GTK_CONTAINER(terminal->hex_frame), hex_vbox);
+    gtk_container_set_border_width(GTK_CONTAINER(hex_vbox), 5);
+
+    terminal->hex_scrolled = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(terminal->hex_scrolled),
+                                   GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
+    // Set height for hex area - will be shown when hex display is enabled
+    gtk_widget_set_size_request(terminal->hex_scrolled, -1, 120); // Half the original height
+    gtk_box_pack_start(GTK_BOX(hex_vbox), terminal->hex_scrolled, TRUE, TRUE, 0);
+
+    terminal->hex_text = gtk_text_view_new();
+    gtk_text_view_set_editable(GTK_TEXT_VIEW(terminal->hex_text), FALSE);
+    gtk_text_view_set_monospace(GTK_TEXT_VIEW(terminal->hex_text), TRUE);
+    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(terminal->hex_text), GTK_WRAP_NONE);
+    gtk_container_add(GTK_CONTAINER(terminal->hex_scrolled), terminal->hex_text);
+
+    // Realize the hex text widget so it can receive styling even when hidden
+    gtk_widget_realize(terminal->hex_text);
 
     // Receive controls
     GtkWidget *receive_controls = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
@@ -487,8 +512,18 @@ void apply_appearance_settings(SerialTerminal *terminal) {
         g_error_free(error);
     }
 
-    GtkStyleContext *context = gtk_widget_get_style_context(terminal->receive_text);
-    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(css_provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    // Apply CSS to text display
+    GtkStyleContext *text_context = gtk_widget_get_style_context(terminal->receive_text);
+    gtk_style_context_add_provider(text_context, GTK_STYLE_PROVIDER(css_provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+    // Apply CSS to hex display if it exists (even if hidden)
+    if (terminal->hex_text) {
+        GtkStyleContext *hex_context = gtk_widget_get_style_context(terminal->hex_text);
+        gtk_style_context_add_provider(hex_context, GTK_STYLE_PROVIDER(css_provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+        // Force the hex text view to realize its style even when hidden
+        gtk_widget_realize(terminal->hex_text);
+    }
 
     g_object_unref(css_provider);
 
