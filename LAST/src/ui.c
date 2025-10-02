@@ -1,5 +1,5 @@
 /*
- * User Interface module for LAST - Linux Advanced Serial Transceiver
+ * User Interface module for LAST - Linux Advanced Serial Terminal
  * Handles GTK UI creation and layout
  */
 
@@ -7,10 +7,36 @@
 #include "callbacks.h"
 
 void create_main_interface(SerialTerminal *terminal) {
-    // Create main window - reduce size by 15-20%
+    // Create main window - adjust for total height including decorations to be max 720px
     terminal->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(terminal->window), "LAST - Linux Advanced Serial Transceiver");
-    gtk_window_set_default_size(GTK_WINDOW(terminal->window), 1190, 600); // Adjusted for 20px borders on both sides
+    gtk_window_set_title(GTK_WINDOW(terminal->window), "LAST - Linux Advanced Serial Terminal");
+
+    // Set window size to exactly 720px total height for laptop compatibility
+    gtk_window_set_default_size(GTK_WINDOW(terminal->window), 1280, 720);
+
+    // Set minimum window size to prevent resizing below usable dimensions
+    gtk_widget_set_size_request(terminal->window, 1280, 720);
+
+    // Try to force the window to be exactly 720px high
+    gtk_window_resize(GTK_WINDOW(terminal->window), 1280, 720);
+
+    // Ensure window is resizable for larger screens and has maximize button
+    gtk_window_set_resizable(GTK_WINDOW(terminal->window), TRUE);
+
+    // Enable maximize button by setting window type hint
+    gtk_window_set_type_hint(GTK_WINDOW(terminal->window), GDK_WINDOW_TYPE_HINT_NORMAL);
+
+    // Set geometry hints to control window sizing
+    GdkGeometry geometry;
+    geometry.min_width = 1280;
+    geometry.min_height = 720;
+    geometry.max_width = -1;  // No maximum width
+    geometry.max_height = -1; // No maximum height
+    gtk_window_set_geometry_hints(GTK_WINDOW(terminal->window), NULL, &geometry,
+                                  GDK_HINT_MIN_SIZE);
+
+    // Center the window on screen
+    gtk_window_set_position(GTK_WINDOW(terminal->window), GTK_WIN_POS_CENTER);
 
     // Set window icon - try multiple approaches
     GdkPixbuf *icon = NULL;
@@ -51,42 +77,40 @@ void create_main_interface(SerialTerminal *terminal) {
     // Create menu bar
     create_menu_bar(terminal, main_vbox);
 
-    // Create main horizontal layout with three columns
-    GtkWidget *main_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(main_vbox), main_hbox, TRUE, TRUE, 5);
+    // Create main horizontal layout with two columns - reduce spacing to save height
+    GtkWidget *main_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3); // Reduced from 5 to 3
+    gtk_box_pack_start(GTK_BOX(main_vbox), main_hbox, TRUE, TRUE, 2); // Reduced from 5 to 2
 
-    // Create left panel (Appearance and File Operations)
-    GtkWidget *left_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-    gtk_widget_set_size_request(left_panel, 300, -1);
-    gtk_box_pack_start(GTK_BOX(main_hbox), left_panel, FALSE, FALSE, 20); // Add 20px left margin
+    // Create left panel (Connection, Control Signals, File Operations)
+    GtkWidget *left_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3); // Reduced spacing from 5 to 3
+    // Set minimum width for left panel but allow it to be responsive
+    gtk_widget_set_size_request(left_panel, 300, -1); // Reduced from 320 to 300
+    gtk_box_pack_start(GTK_BOX(main_hbox), left_panel, FALSE, FALSE, 15); // Reduced margin from 20 to 15
 
-    // Create appearance panel
-    create_appearance_panel(terminal, left_panel);
+    // Create connection panel (upper left)
+    create_connection_panel(terminal, left_panel);
 
-    // Create file operations panel
+    // Create control signals panel (middle left)
+    create_control_signals_panel(terminal, left_panel);
+
+    // Create file operations panel (bottom left)
     create_file_operations_panel(terminal, left_panel);
 
-    // Create center panel (Data area and send controls) - optimized width
-    GtkWidget *center_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-    gtk_widget_set_size_request(center_panel, 480, -1); // Adjusted for better fit in smaller window
-    gtk_box_pack_start(GTK_BOX(main_hbox), center_panel, FALSE, FALSE, 0);
+    // Create center panel (Data area and send controls) - responsive width
+    GtkWidget *center_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3); // Reduced spacing from 5 to 3
+    // Remove fixed width constraint to allow proper expansion
+    // gtk_widget_set_size_request(center_panel, 800, -1); // Removed fixed width
+    gtk_box_pack_start(GTK_BOX(main_hbox), center_panel, TRUE, TRUE, 15); // Reduced margin from 20 to 15
 
     // Create data area in center
     create_data_area(terminal, center_panel);
 
-    // Create right panel (Connection, Display Options, Control Signals) - fixed width
-    GtkWidget *right_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-    gtk_widget_set_size_request(right_panel, 320, -1); // Slightly wider for better content fit
-    gtk_box_pack_start(GTK_BOX(main_hbox), right_panel, FALSE, FALSE, 20); // Add 20px right margin
-
-    // Create connection panel
-    create_connection_panel(terminal, right_panel);
-
-    // Create display options panel
-    create_display_options_panel(terminal, right_panel);
-
-    // Create control signals panel
-    create_control_signals_panel(terminal, right_panel);
+    // Create hidden appearance and display options panels for menu dialogs
+    // These widgets are needed for the menu callbacks but not displayed in the main UI
+    GtkWidget *hidden_container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    create_appearance_panel(terminal, hidden_container);
+    create_display_options_panel(terminal, hidden_container);
+    // Don't add hidden_container to any visible parent
 
     // Create status bar
     GtkWidget *status_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
@@ -211,6 +235,9 @@ void create_display_options_panel(SerialTerminal *terminal, GtkWidget *parent) {
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "16");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "32");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "64");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "128");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "256");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->hex_bytes_per_line_combo), "512");
     gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->hex_bytes_per_line_combo), 0); // Auto (CR+LF)
     gtk_box_pack_start(GTK_BOX(hex_hbox), terminal->hex_bytes_per_line_combo, TRUE, TRUE, 0);
 
@@ -376,8 +403,8 @@ void create_data_area(SerialTerminal *terminal, GtkWidget *parent) {
     // Enable both vertical and horizontal scroll bars
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
                                    GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
-    // Set a reasonable height for the receive area
-    gtk_widget_set_size_request(scrolled, -1, 300);
+    // Set height for receive area to fit within laptop screen constraints
+    gtk_widget_set_size_request(scrolled, -1, 240); // Reduced to 240 to accommodate smaller window height
     gtk_box_pack_start(GTK_BOX(receive_vbox), scrolled, TRUE, TRUE, 0);
 
     terminal->receive_text = gtk_text_view_new();
@@ -536,6 +563,21 @@ void create_menu_bar(SerialTerminal *terminal, GtkWidget *parent) {
     GtkWidget *exit_item = gtk_menu_item_new_with_label("Exit");
     gtk_menu_shell_append(GTK_MENU_SHELL(terminal->file_menu), exit_item);
     g_signal_connect(exit_item, "activate", G_CALLBACK(on_file_exit_activate), terminal);
+
+    // View menu
+    GtkWidget *view_menu_item = gtk_menu_item_new_with_label("View");
+    gtk_menu_shell_append(GTK_MENU_SHELL(terminal->menu_bar), view_menu_item);
+
+    terminal->view_menu = gtk_menu_new();
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(view_menu_item), terminal->view_menu);
+
+    GtkWidget *appearance_item = gtk_menu_item_new_with_label("Appearance...");
+    gtk_menu_shell_append(GTK_MENU_SHELL(terminal->view_menu), appearance_item);
+    g_signal_connect(appearance_item, "activate", G_CALLBACK(on_view_appearance_activate), terminal);
+
+    GtkWidget *display_options_item = gtk_menu_item_new_with_label("Display Options...");
+    gtk_menu_shell_append(GTK_MENU_SHELL(terminal->view_menu), display_options_item);
+    g_signal_connect(display_options_item, "activate", G_CALLBACK(on_view_display_options_activate), terminal);
 
     // Tools menu
     GtkWidget *tools_menu_item = gtk_menu_item_new_with_label("Tools");

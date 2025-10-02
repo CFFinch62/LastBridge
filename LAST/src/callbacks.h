@@ -54,6 +54,10 @@ void on_file_exit_activate(GtkWidget *widget, gpointer data);
 void on_tools_bridge_activate(GtkWidget *widget, gpointer data);
 void on_help_about_activate(GtkWidget *widget, gpointer data);
 
+// View menu callbacks
+void on_view_appearance_activate(GtkWidget *widget, gpointer data);
+void on_view_display_options_activate(GtkWidget *widget, gpointer data);
+
 // Function to connect all signals
 void connect_signals(SerialTerminal *terminal);
 

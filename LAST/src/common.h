@@ -39,6 +39,7 @@ typedef struct {
     // Menu bar
     GtkWidget *menu_bar;
     GtkWidget *file_menu;
+    GtkWidget *view_menu;
     GtkWidget *tools_menu;
     GtkWidget *help_menu;
 
