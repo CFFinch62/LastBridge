@@ -25,6 +25,7 @@ void on_save_clicked(GtkWidget *widget, gpointer data);
 // File operation callbacks
 void on_send_file_clicked(GtkWidget *widget, gpointer data);
 void on_send_file_stop_clicked(GtkWidget *widget, gpointer data);
+void on_send_file_lines_toggled(GtkWidget *widget, gpointer data);
 void on_log_toggled(GtkWidget *widget, gpointer data);
 
 // Control signal callbacks
@@ -57,6 +58,11 @@ void on_help_about_activate(GtkWidget *widget, gpointer data);
 // View menu callbacks
 void on_view_appearance_activate(GtkWidget *widget, gpointer data);
 void on_view_display_options_activate(GtkWidget *widget, gpointer data);
+
+// Macro callbacks
+void on_macro_button_clicked(GtkWidget *widget, gpointer data);
+void on_macros_program_activate(GtkWidget *widget, gpointer data);
+void on_macros_toggle_activate(GtkWidget *widget, gpointer data);
 
 // Function to connect all signals
 void connect_signals(SerialTerminal *terminal);

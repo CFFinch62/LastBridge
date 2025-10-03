@@ -25,4 +25,14 @@ void create_data_area(SerialTerminal *terminal, GtkWidget *parent);
 void apply_appearance_settings(SerialTerminal *terminal);
 void apply_theme_setting(SerialTerminal *terminal);
 
+// Interval dropdown functions
+void populate_interval_dropdown_for_repeat(SerialTerminal *terminal);
+void populate_interval_dropdown_for_lines(SerialTerminal *terminal);
+void update_interval_dropdown_based_on_mode(SerialTerminal *terminal);
+
+// Macro functions
+void create_macro_panel(SerialTerminal *terminal, GtkWidget *parent);
+void show_macro_programming_dialog(SerialTerminal *terminal);
+void toggle_macro_panel_visibility(SerialTerminal *terminal);
+
 #endif // UI_H

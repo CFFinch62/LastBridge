@@ -33,6 +33,9 @@ void append_to_receive_text(SerialTerminal *terminal, const char *text, gboolean
 gboolean append_to_receive_text_idle(gpointer data);
 gboolean append_to_dual_display_idle(gpointer data);
 
+// Status message function (for application messages, not serial data)
+void show_status_message(SerialTerminal *terminal, const char *message);
+
 // Control signal functions
 void set_control_signals(SerialTerminal *terminal);
 void send_break_signal(SerialTerminal *terminal);

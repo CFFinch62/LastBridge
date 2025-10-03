@@ -116,6 +116,12 @@ void on_send_file_stop_clicked(GtkWidget *widget, gpointer data) {
     stop_repeat_file_sending((SerialTerminal *)data);
 }
 
+void on_send_file_lines_toggled(GtkWidget *widget, gpointer data) {
+    (void)widget;
+    SerialTerminal *terminal = (SerialTerminal *)data;
+    update_interval_dropdown_based_on_mode(terminal);
+}
+
 void on_log_toggled(GtkWidget *widget, gpointer data) {
     (void)widget;
     toggle_logging((SerialTerminal *)data);
@@ -670,6 +676,7 @@ void connect_signals(SerialTerminal *terminal) {
     // File operation signals
     g_signal_connect(terminal->send_file_button, "clicked", G_CALLBACK(on_send_file_clicked), terminal);
     g_signal_connect(terminal->send_file_stop_button, "clicked", G_CALLBACK(on_send_file_stop_clicked), terminal);
+    g_signal_connect(terminal->send_file_lines_check, "toggled", G_CALLBACK(on_send_file_lines_toggled), terminal);
     g_signal_connect(terminal->log_file_button, "toggled", G_CALLBACK(on_log_toggled), terminal);
 
     // Control signal signals
@@ -693,4 +700,68 @@ void connect_signals(SerialTerminal *terminal) {
 
     // Application lifecycle signals
     g_signal_connect(terminal->window, "destroy", G_CALLBACK(on_window_destroy), terminal);
+}
+
+void on_macro_button_clicked(GtkWidget *widget, gpointer data) {
+    SerialTerminal *terminal = (SerialTerminal *)data;
+
+    if (!terminal->connected) return;
+
+    // Get the macro index from the button data
+    int macro_index = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(widget), "macro_index"));
+
+    if (macro_index < 0 || macro_index >= MAX_MACRO_BUTTONS) return;
+
+    // Get the command to send
+    const char *command = terminal->macro_commands[macro_index];
+
+    // Only send if command is not empty
+    if (strlen(command) > 0) {
+        // Send the command
+        ssize_t bytes_written = write(terminal->serial_fd, command, strlen(command));
+        if (bytes_written > 0) {
+            terminal->bytes_sent += bytes_written;
+            // Mark TX activity
+            terminal->tx_active = TRUE;
+            terminal->tx_last_activity = time(NULL);
+        }
+
+        // Add line ending if configured
+        if (terminal->line_ending && strlen(terminal->line_ending) > 0) {
+            bytes_written = write(terminal->serial_fd, terminal->line_ending, strlen(terminal->line_ending));
+            if (bytes_written > 0) {
+                terminal->bytes_sent += bytes_written;
+                // Mark TX activity for line ending too
+                terminal->tx_active = TRUE;
+                terminal->tx_last_activity = time(NULL);
+            }
+        }
+
+        // Log to file if enabled
+        if (terminal->log_file) {
+            char *timestamp = get_current_timestamp();
+            fprintf(terminal->log_file, "[%s] TX: %s\n", timestamp, command);
+            fflush(terminal->log_file);
+            free(timestamp);
+        }
+
+        // Local echo if enabled
+        if (terminal->local_echo) {
+            char echo_text[1024];
+            snprintf(echo_text, sizeof(echo_text), "TX: %s", command);
+            append_to_receive_text(terminal, echo_text, FALSE);
+        }
+    }
+}
+
+void on_macros_program_activate(GtkWidget *widget, gpointer data) {
+    (void)widget; // Suppress unused parameter warning
+    SerialTerminal *terminal = (SerialTerminal *)data;
+    show_macro_programming_dialog(terminal);
+}
+
+void on_macros_toggle_activate(GtkWidget *widget, gpointer data) {
+    (void)widget; // Suppress unused parameter warning
+    SerialTerminal *terminal = (SerialTerminal *)data;
+    toggle_macro_panel_visibility(terminal);
 }

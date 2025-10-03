@@ -28,10 +28,19 @@ A full-featured serial terminal application built from the working low-level ser
 
 ### **File Operations**
 - ✅ **Send files** - transmit entire files through serial port
+- ✅ **Line-by-line transmission** - send files line-by-line with configurable delays (100ms-2000ms)
 - ✅ **Repeat file sending** - automatically repeat file transmission at configurable intervals
 - ✅ **Flexible timing** - choose from 0.1, 0.2, 0.5, 1.0, or 2.0 second intervals
 - ✅ **Save received data** - save all received data to text files
 - ✅ **Data logging** - log all communication to files with timestamps
+
+### **Programmable Macros** 🆕
+- ✅ **16 macro buttons** - programmable buttons for quick command transmission
+- ✅ **Custom labels** - personalize button names for easy identification
+- ✅ **Command storage** - store frequently used commands up to 256 characters each
+- ✅ **Persistent settings** - macro configurations saved between application launches
+- ✅ **Show/hide panel** - toggle macro panel visibility for flexible screen usage
+- ✅ **Professional layout** - organized in scrollable panel with consistent button sizing
 
 ### **Control Signals**
 - ✅ **DTR control** - Data Terminal Ready signal
@@ -76,13 +85,20 @@ The build system automatically:
 ### **Left Panel - Settings**
 - **Connection Settings**: Port, baud rate, data bits, parity, stop bits, flow control
 - **Display Options**: Hex display, timestamps, auto-scroll, local echo, line endings
-- **File Operations**: Send file, save data, logging controls
+- **File Operations**: Send file, line-by-line mode, save data, logging controls
 - **Control Signals**: DTR, RTS, break signal
+
+### **Middle Panel - Macros** 🆕
+- **16 Programmable Buttons**: Quick access to frequently used commands
+- **Scrollable Layout**: Organized display with consistent 180x30 pixel buttons
+- **Toggle Visibility**: Show/hide panel via "Macros" → "Show/Hide Macro Panel"
+- **Programming Interface**: Access via "Macros" → "Program Macros..." menu
 
 ### **Right Panel - Data**
 - **Received Data Area**: Scrollable text area for received data in text format
 - **Hex Data Area**: Scrollable hex display (shown by default, toggleable)
 - **Send Area**: Text entry and send button for outgoing data
+- **Dynamic Width**: Automatically expands when macro panel is hidden
 
 ### **Status Bar**
 - **Connection status**: Current port and settings
@@ -125,6 +141,32 @@ Perfect for testing and simulation scenarios:
 - **Data streaming** - simulate continuous sensor data
 - **Stress testing** - flood test with repeated data
 
+### **Programmable Macro System** 🆕
+Streamline your workflow with 16 customizable macro buttons:
+
+#### **Programming Macros**
+1. **Access Programming Dialog** - "Macros" → "Program Macros..."
+2. **Set Button Labels** - customize button text (up to 32 characters)
+3. **Define Commands** - enter commands to send (up to 256 characters each)
+4. **Save Configuration** - settings automatically persist between sessions
+
+#### **Using Macros**
+1. **Connect to Device** - establish serial connection first
+2. **Click Macro Button** - instantly sends the programmed command
+3. **View Transmission** - see "TX: command" in received data (if local echo enabled)
+4. **Monitor Response** - device responses appear in real-time
+
+#### **Panel Management**
+- **Show Panel**: "Macros" → "Show/Hide Macro Panel" (default: visible)
+- **Hide Panel**: Same menu option - gives more space to data display areas
+- **Persistent State**: Panel visibility preference saved between sessions
+
+**Perfect for Marine Electronics:**
+- **Fish Finder Commands**: `!Q`, `!AP,1`, `!TR,51`, `!VD,480`
+- **GPS Commands**: `$PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*28`
+- **Autopilot Commands**: `$STALK,84,06,00,00*48`
+- **Custom Protocols**: Any command sequence your devices require
+
 ### **Port Detection Algorithm**
 1. **Standard enumeration** - uses system port detection
 2. **Direct scanning** - scans `/dev/tty*`, `/dev/ttyS*`, `/dev/ttyUSB*`, etc.
@@ -152,8 +194,11 @@ Perfect for testing and simulation scenarios:
 | **Dynamic layout** | ❌ | ❌ | ✅ 🆕 |
 | Timestamps | ❌ | ✅ | ✅ |
 | File operations | ✅ | ✅ | ✅ |
+| **Line-by-line file sending** | ❌ | ❌ | ✅ 🆕 |
 | **Repeat file sending** | ❌ | ❌ | ✅ 🆕 |
 | **Configurable intervals** | ❌ | ❌ | ✅ 🆕 |
+| **Programmable macros** | ❌ | ❌ | ✅ 🆕 |
+| **Macro panel toggle** | ❌ | ❌ | ✅ 🆕 |
 | Data logging | ❌ | ✅ | ✅ |
 | Control signals | ✅ | ✅ | ✅ |
 | Statistics | ❌ | ❌ | ✅ |

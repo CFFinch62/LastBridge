@@ -178,8 +178,8 @@ void connect_serial(SerialTerminal *terminal) {
              port, baudrate_str, databits_str, parity_str, stopbits_str);
     gtk_label_set_text(GTK_LABEL(terminal->status_label), status_msg);
 
-    // Log connection
-    append_to_receive_text(terminal, status_msg, FALSE);
+    // Connection message already shown in status label above
+    // Don't clutter the serial data area with connection messages
 
     // Start signal line monitoring
     start_signal_monitoring(terminal);
@@ -196,6 +196,15 @@ void disconnect_serial(SerialTerminal *terminal) {
 
     // Stop signal line monitoring
     stop_signal_monitoring(terminal);
+
+    // Reset all activity indicators
+    terminal->tx_active = FALSE;
+    terminal->rx_active = FALSE;
+    terminal->tx_last_activity = 0;
+    terminal->rx_last_activity = 0;
+
+    // Force immediate update of indicators to show inactive state
+    update_signal_indicators(terminal);
 
     // Wait for read thread to finish
     pthread_join(terminal->read_thread, NULL);
@@ -223,8 +232,8 @@ void disconnect_serial(SerialTerminal *terminal) {
 
     gtk_label_set_text(GTK_LABEL(terminal->status_label), "Disconnected");
 
-    // Log disconnection
-    append_to_receive_text(terminal, "Disconnected", FALSE);
+    // Show disconnection in status label
+    show_status_message(terminal, "Disconnected");
 }
 
 void *read_thread_func(void *arg) {
@@ -382,6 +391,13 @@ void append_to_receive_text(SerialTerminal *terminal, const char *text, gboolean
     g_idle_add(append_to_receive_text_idle, g_strdup(text));
 }
 
+void show_status_message(SerialTerminal *terminal, const char *message) {
+    // Show status messages in the status label, not in the serial data area
+    if (terminal && terminal->status_label) {
+        gtk_label_set_text(GTK_LABEL(terminal->status_label), message);
+    }
+}
+
 void apply_serial_settings(SerialTerminal *terminal) {
     struct termios tio;
     tcgetattr(terminal->serial_fd, &tio);
@@ -536,7 +552,7 @@ void send_break_signal(SerialTerminal *terminal) {
     if (!terminal->connected) return;
 
     tcsendbreak(terminal->serial_fd, 0);
-    append_to_receive_text(terminal, "Break signal sent", FALSE);
+    show_status_message(terminal, "Break signal sent");
 }
 
 void update_indicator_color(GtkWidget *indicator, const char *color) {

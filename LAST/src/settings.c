@@ -4,6 +4,7 @@
  */
 
 #include "settings.h"
+#include "ui.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -99,6 +100,35 @@ void load_settings(SerialTerminal *terminal) {
                 if (terminal->saved_flowcontrol) free(terminal->saved_flowcontrol);
                 terminal->saved_flowcontrol = strdup(value);
             }
+            // File operations settings
+            else if (strcmp(key, "line_by_line_mode") == 0) {
+                terminal->line_by_line_mode = (strcmp(value, "true") == 0);
+            } else if (strcmp(key, "line_by_line_delay_ms") == 0) {
+                terminal->line_by_line_delay_ms = atoi(value);
+            }
+            // Macro settings
+            else if (strcmp(key, "macro_panel_visible") == 0) {
+                terminal->macro_panel_visible = (strcmp(value, "true") == 0);
+            } else if (strncmp(key, "macro_", 6) == 0) {
+                // Parse macro index and type (label or command)
+                int macro_index = -1;
+                char *underscore = strchr(key + 6, '_');
+                if (underscore) {
+                    *underscore = '\0'; // Temporarily null-terminate
+                    macro_index = atoi(key + 6);
+                    *underscore = '_'; // Restore underscore
+
+                    if (macro_index >= 0 && macro_index < MAX_MACRO_BUTTONS) {
+                        if (strstr(key, "_label")) {
+                            strncpy(terminal->macro_labels[macro_index], value, MAX_MACRO_LABEL_LENGTH - 1);
+                            terminal->macro_labels[macro_index][MAX_MACRO_LABEL_LENGTH - 1] = '\0';
+                        } else if (strstr(key, "_command")) {
+                            strncpy(terminal->macro_commands[macro_index], value, MAX_MACRO_COMMAND_LENGTH - 1);
+                            terminal->macro_commands[macro_index][MAX_MACRO_COMMAND_LENGTH - 1] = '\0';
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -162,6 +192,24 @@ void save_settings(SerialTerminal *terminal) {
     if (terminal->flowcontrol_combo) {
         const char *flowcontrol = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(terminal->flowcontrol_combo));
         if (flowcontrol) fprintf(file, "flowcontrol=%s\n", flowcontrol);
+    }
+    fprintf(file, "\n");
+
+    // File operations settings
+    fprintf(file, "[FileOperations]\n");
+    if (terminal->send_file_lines_check) {
+        gboolean lines_mode = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(terminal->send_file_lines_check));
+        fprintf(file, "line_by_line_mode=%s\n", lines_mode ? "true" : "false");
+    }
+    fprintf(file, "line_by_line_delay_ms=%d\n", terminal->line_by_line_delay_ms);
+    fprintf(file, "\n");
+
+    // Macro settings
+    fprintf(file, "[Macros]\n");
+    fprintf(file, "macro_panel_visible=%s\n", terminal->macro_panel_visible ? "true" : "false");
+    for (int i = 0; i < MAX_MACRO_BUTTONS; i++) {
+        fprintf(file, "macro_%d_label=%s\n", i, terminal->macro_labels[i]);
+        fprintf(file, "macro_%d_command=%s\n", i, terminal->macro_commands[i]);
     }
     fprintf(file, "\n");
 
@@ -441,6 +489,29 @@ void update_settings_from_ui(SerialTerminal *terminal) {
         if (flowcontrol) {
             if (terminal->saved_flowcontrol) free(terminal->saved_flowcontrol);
             terminal->saved_flowcontrol = strdup(flowcontrol);
+        }
+    }
+
+    // Apply file operations settings
+    if (terminal->send_file_lines_check) {
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(terminal->send_file_lines_check), terminal->line_by_line_mode);
+        // Update the interval dropdown based on the loaded setting
+        update_interval_dropdown_based_on_mode(terminal);
+    }
+
+    // Apply macro button labels and panel visibility
+    for (int i = 0; i < MAX_MACRO_BUTTONS; i++) {
+        if (terminal->macro_buttons[i]) {
+            gtk_button_set_label(GTK_BUTTON(terminal->macro_buttons[i]), terminal->macro_labels[i]);
+        }
+    }
+
+    // Apply macro panel visibility
+    if (terminal->macro_panel) {
+        if (terminal->macro_panel_visible) {
+            gtk_widget_show(terminal->macro_panel);
+        } else {
+            gtk_widget_hide(terminal->macro_panel);
         }
     }
 }

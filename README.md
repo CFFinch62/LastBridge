@@ -15,10 +15,11 @@ A comprehensive serial communication solution consisting of two integrated appli
 - 🔍 **Advanced Port Detection** - Overcomes Linux limitations with comprehensive scanning
 - ⚙️ **Complete Serial Control** - All parameters: baud rate, data bits, parity, stop bits
 - 📊 **Dual Display Mode** - Simultaneous text and hex data visualization with dynamic layout
-- 📁 **File Operations** - Send files and save received data
+- 📁 **File Operations** - Send files with line-by-line transmission and configurable delays
+- 🎯 **Programmable Macros** - 16 customizable buttons for quick command transmission
 - 📈 **Real-time Statistics** - Data counters, connection time, error tracking
 - 🎛️ **Control Signals** - DTR, RTS, Break signal management
-- 🎨 **Professional GUI** - Clean, intuitive GTK3 interface
+- 🎨 **Professional GUI** - Clean, intuitive GTK3 interface with flexible layout
 - 🔗 **BRIDGE Integration** - Launch virtual null modem directly from menu
 
 ### BRIDGE - Virtual Null Modem Bridge

@@ -29,6 +29,11 @@
 #define CRTSCTS 020000000000
 #endif
 
+// Macro button constants
+#define MAX_MACRO_BUTTONS 16
+#define MAX_MACRO_LABEL_LENGTH 32
+#define MAX_MACRO_COMMAND_LENGTH 256
+
 // Main application data structure
 typedef struct {
     // Main window and layout
@@ -41,6 +46,7 @@ typedef struct {
     GtkWidget *file_menu;
     GtkWidget *view_menu;
     GtkWidget *tools_menu;
+    GtkWidget *macros_menu;
     GtkWidget *help_menu;
 
     // Connection settings
@@ -83,7 +89,9 @@ typedef struct {
     // File operations
     GtkWidget *send_file_button;
     GtkWidget *send_file_repeat_check;
+    GtkWidget *send_file_lines_check;
     GtkWidget *send_file_interval_combo;
+    GtkWidget *send_file_interval_label;
     GtkWidget *send_file_stop_button;
     GtkWidget *log_file_button;
     GtkWidget *log_file_entry;
@@ -148,12 +156,27 @@ typedef struct {
     char *repeat_filename;
     double repeat_interval;
 
+    // Line-by-line file sending
+    gboolean line_by_line_sending;
+    gboolean line_by_line_mode;
+    guint line_by_line_timer_id;
+    FILE *line_by_line_file;
+    int line_by_line_delay_ms;
+    int current_line_number;
+
     // Signal line status and activity tracking
     guint signal_update_timer_id;
     gboolean tx_active;
     gboolean rx_active;
     time_t tx_last_activity;
     time_t rx_last_activity;
+
+    // Macro buttons
+    GtkWidget *macro_panel;
+    GtkWidget *macro_buttons[MAX_MACRO_BUTTONS];
+    char macro_labels[MAX_MACRO_BUTTONS][MAX_MACRO_LABEL_LENGTH];
+    char macro_commands[MAX_MACRO_BUTTONS][MAX_MACRO_COMMAND_LENGTH];
+    gboolean macro_panel_visible;
 } SerialTerminal;
 
 // Global terminal instance (declared here, defined in main.c)

@@ -51,12 +51,29 @@ int main(int argc, char *argv[]) {
     terminal.repeat_filename = NULL;
     terminal.repeat_interval = 1.0;
 
+    // Initialize line-by-line file sending
+    terminal.line_by_line_sending = FALSE;
+    terminal.line_by_line_mode = FALSE;
+    terminal.line_by_line_timer_id = 0;
+    terminal.line_by_line_file = NULL;
+    terminal.line_by_line_delay_ms = 100;  // Default 100ms
+    terminal.current_line_number = 0;
+
     // Initialize signal line monitoring
     terminal.signal_update_timer_id = 0;
     terminal.tx_active = FALSE;
     terminal.rx_active = FALSE;
     terminal.tx_last_activity = 0;
     terminal.rx_last_activity = 0;
+
+    // Initialize macro buttons
+    terminal.macro_panel = NULL;
+    terminal.macro_panel_visible = TRUE; // Default to visible
+    for (int i = 0; i < MAX_MACRO_BUTTONS; i++) {
+        terminal.macro_buttons[i] = NULL;
+        snprintf(terminal.macro_labels[i], MAX_MACRO_LABEL_LENGTH, "Macro %d", i + 1);
+        terminal.macro_commands[i][0] = '\0'; // Empty command initially
+    }
 
     // Initialize serial connection
     terminal.connected = FALSE;
