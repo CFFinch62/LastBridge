@@ -180,6 +180,9 @@ void connect_serial(SerialTerminal *terminal) {
 
     // Log connection
     append_to_receive_text(terminal, status_msg, FALSE);
+
+    // Start signal line monitoring
+    start_signal_monitoring(terminal);
 }
 
 void disconnect_serial(SerialTerminal *terminal) {
@@ -190,6 +193,9 @@ void disconnect_serial(SerialTerminal *terminal) {
 
     // Stop repeat file sending if active
     stop_repeat_file_sending(terminal);
+
+    // Stop signal line monitoring
+    stop_signal_monitoring(terminal);
 
     // Wait for read thread to finish
     pthread_join(terminal->read_thread, NULL);
@@ -240,6 +246,10 @@ void *read_thread_func(void *arg) {
             if (bytes_read > 0) {
                 // Update statistics
                 terminal->bytes_received += bytes_read;
+
+                // Mark RX activity
+                terminal->rx_active = TRUE;
+                terminal->rx_last_activity = time(NULL);
 
                 // Log to file if enabled
                 if (terminal->log_file) {
@@ -462,6 +472,9 @@ void send_data(SerialTerminal *terminal) {
     ssize_t bytes_written = write(terminal->serial_fd, text, strlen(text));
     if (bytes_written > 0) {
         terminal->bytes_sent += bytes_written;
+        // Mark TX activity
+        terminal->tx_active = TRUE;
+        terminal->tx_last_activity = time(NULL);
     }
 
     // Add line ending if configured
@@ -469,6 +482,9 @@ void send_data(SerialTerminal *terminal) {
         bytes_written = write(terminal->serial_fd, terminal->line_ending, strlen(terminal->line_ending));
         if (bytes_written > 0) {
             terminal->bytes_sent += bytes_written;
+            // Mark TX activity for line ending too
+            terminal->tx_active = TRUE;
+            terminal->tx_last_activity = time(NULL);
         }
     }
 
@@ -521,4 +537,78 @@ void send_break_signal(SerialTerminal *terminal) {
 
     tcsendbreak(terminal->serial_fd, 0);
     append_to_receive_text(terminal, "Break signal sent", FALSE);
+}
+
+void update_indicator_color(GtkWidget *indicator, const char *color) {
+    if (!indicator) return;
+
+    char css[256];
+    snprintf(css, sizeof(css),
+        "label { background-color: %s; color: white; font-weight: bold; "
+        "border: 1px solid #333; border-radius: 3px; font-size: 9px; }", color);
+
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(provider, css, -1, NULL);
+    GtkStyleContext *context = gtk_widget_get_style_context(indicator);
+    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider),
+                                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_unref(provider);
+}
+
+gboolean update_signal_indicators(gpointer data) {
+    SerialTerminal *terminal = (SerialTerminal *)data;
+
+    if (!terminal->connected) {
+        // Set all indicators to inactive when disconnected
+        update_indicator_color(terminal->tx_indicator, "#666666");  // Gray
+        update_indicator_color(terminal->rx_indicator, "#666666");  // Gray
+        update_indicator_color(terminal->cts_indicator, "#CC0000"); // Red
+        update_indicator_color(terminal->rts_indicator, "#CC0000"); // Red
+        update_indicator_color(terminal->dtr_indicator, "#CC0000"); // Red
+        update_indicator_color(terminal->dsr_indicator, "#CC0000"); // Red
+        return TRUE; // Continue timer
+    }
+
+    // Read current signal line status
+    int status;
+    if (ioctl(terminal->serial_fd, TIOCMGET, &status) == 0) {
+        // Update control signal indicators
+        update_indicator_color(terminal->cts_indicator, (status & TIOCM_CTS) ? "#00CC00" : "#CC0000");
+        update_indicator_color(terminal->rts_indicator, (status & TIOCM_RTS) ? "#00CC00" : "#CC0000");
+        update_indicator_color(terminal->dtr_indicator, (status & TIOCM_DTR) ? "#00CC00" : "#CC0000");
+        update_indicator_color(terminal->dsr_indicator, (status & TIOCM_DSR) ? "#00CC00" : "#CC0000");
+    }
+
+    // Update TX/RX activity indicators (show yellow for 500ms after activity)
+    time_t current_time = time(NULL);
+
+    if (terminal->tx_active && (current_time - terminal->tx_last_activity) < 1) {
+        update_indicator_color(terminal->tx_indicator, "#FFCC00");  // Yellow
+    } else {
+        update_indicator_color(terminal->tx_indicator, "#666666");  // Gray
+        terminal->tx_active = FALSE;
+    }
+
+    if (terminal->rx_active && (current_time - terminal->rx_last_activity) < 1) {
+        update_indicator_color(terminal->rx_indicator, "#FFCC00");  // Yellow
+    } else {
+        update_indicator_color(terminal->rx_indicator, "#666666");  // Gray
+        terminal->rx_active = FALSE;
+    }
+
+    return TRUE; // Continue timer
+}
+
+void start_signal_monitoring(SerialTerminal *terminal) {
+    if (terminal->signal_update_timer_id == 0) {
+        // Update indicators every 100ms
+        terminal->signal_update_timer_id = g_timeout_add(100, update_signal_indicators, terminal);
+    }
+}
+
+void stop_signal_monitoring(SerialTerminal *terminal) {
+    if (terminal->signal_update_timer_id != 0) {
+        g_source_remove(terminal->signal_update_timer_id);
+        terminal->signal_update_timer_id = 0;
+    }
 }

@@ -64,6 +64,14 @@ typedef struct {
     GtkWidget *clear_button;
     GtkWidget *save_button;
 
+    // Signal line indicators
+    GtkWidget *tx_indicator;
+    GtkWidget *rx_indicator;
+    GtkWidget *cts_indicator;
+    GtkWidget *rts_indicator;
+    GtkWidget *dtr_indicator;
+    GtkWidget *dsr_indicator;
+
     // Display options
     GtkWidget *hex_display_check;
     GtkWidget *hex_bytes_per_line_combo;
@@ -139,6 +147,13 @@ typedef struct {
     guint repeat_timer_id;
     char *repeat_filename;
     double repeat_interval;
+
+    // Signal line status and activity tracking
+    guint signal_update_timer_id;
+    gboolean tx_active;
+    gboolean rx_active;
+    time_t tx_last_activity;
+    time_t rx_last_activity;
 } SerialTerminal;
 
 // Global terminal instance (declared here, defined in main.c)

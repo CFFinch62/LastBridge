@@ -390,6 +390,58 @@ void create_control_signals_panel(SerialTerminal *terminal, GtkWidget *parent) {
     gtk_box_pack_start(GTK_BOX(vbox), terminal->break_button, FALSE, FALSE, 0);
 }
 
+static GtkWidget* create_indicator(const char *label, const char *color) {
+    GtkWidget *indicator = gtk_label_new(label);
+    gtk_widget_set_size_request(indicator, 30, 20);
+    gtk_label_set_justify(GTK_LABEL(indicator), GTK_JUSTIFY_CENTER);
+
+    // Set initial styling
+    char css[256];
+    snprintf(css, sizeof(css),
+        "label { background-color: %s; color: white; font-weight: bold; "
+        "border: 1px solid #333; border-radius: 3px; font-size: 9px; }", color);
+
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(provider, css, -1, NULL);
+    GtkStyleContext *context = gtk_widget_get_style_context(indicator);
+    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider),
+                                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_unref(provider);
+
+    return indicator;
+}
+
+void create_signal_indicators(SerialTerminal *terminal, GtkWidget *parent) {
+    // Create a frame for the indicators
+    GtkWidget *indicators_frame = gtk_frame_new("Signal Status");
+    gtk_box_pack_start(GTK_BOX(parent), indicators_frame, FALSE, FALSE, 0);
+
+    // Create horizontal box for indicators
+    GtkWidget *indicators_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
+    gtk_container_add(GTK_CONTAINER(indicators_frame), indicators_hbox);
+    gtk_container_set_border_width(GTK_CONTAINER(indicators_hbox), 3);
+
+    // Create TX/RX activity indicators (gray when inactive, yellow when active)
+    terminal->tx_indicator = create_indicator("TX", "#666666");  // Gray when inactive
+    gtk_box_pack_start(GTK_BOX(indicators_hbox), terminal->tx_indicator, FALSE, FALSE, 0);
+
+    terminal->rx_indicator = create_indicator("RX", "#666666");  // Gray when inactive
+    gtk_box_pack_start(GTK_BOX(indicators_hbox), terminal->rx_indicator, FALSE, FALSE, 0);
+
+    // Create control signal indicators (red when inactive, green when active)
+    terminal->cts_indicator = create_indicator("CTS", "#CC0000");  // Red when inactive
+    gtk_box_pack_start(GTK_BOX(indicators_hbox), terminal->cts_indicator, FALSE, FALSE, 0);
+
+    terminal->rts_indicator = create_indicator("RTS", "#CC0000");  // Red when inactive
+    gtk_box_pack_start(GTK_BOX(indicators_hbox), terminal->rts_indicator, FALSE, FALSE, 0);
+
+    terminal->dtr_indicator = create_indicator("DTR", "#CC0000");  // Red when inactive
+    gtk_box_pack_start(GTK_BOX(indicators_hbox), terminal->dtr_indicator, FALSE, FALSE, 0);
+
+    terminal->dsr_indicator = create_indicator("DSR", "#CC0000");  // Red when inactive
+    gtk_box_pack_start(GTK_BOX(indicators_hbox), terminal->dsr_indicator, FALSE, FALSE, 0);
+}
+
 void create_data_area(SerialTerminal *terminal, GtkWidget *parent) {
     // Receive area - make it less tall
     GtkWidget *receive_frame = gtk_frame_new("Received Data");
@@ -448,6 +500,13 @@ void create_data_area(SerialTerminal *terminal, GtkWidget *parent) {
 
     terminal->save_button = gtk_button_new_with_label("Save Received Data...");
     gtk_box_pack_start(GTK_BOX(receive_controls), terminal->save_button, FALSE, FALSE, 0);
+
+    // Add spacer to push indicators to the right
+    GtkWidget *spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_box_pack_start(GTK_BOX(receive_controls), spacer, TRUE, TRUE, 0);
+
+    // Create signal line indicators
+    create_signal_indicators(terminal, receive_controls);
 
     // Send area - keep in center
     GtkWidget *send_frame = gtk_frame_new("Send Data");

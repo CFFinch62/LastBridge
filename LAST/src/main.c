@@ -51,6 +51,13 @@ int main(int argc, char *argv[]) {
     terminal.repeat_filename = NULL;
     terminal.repeat_interval = 1.0;
 
+    // Initialize signal line monitoring
+    terminal.signal_update_timer_id = 0;
+    terminal.tx_active = FALSE;
+    terminal.rx_active = FALSE;
+    terminal.tx_last_activity = 0;
+    terminal.rx_last_activity = 0;
+
     // Initialize serial connection
     terminal.connected = FALSE;
     terminal.thread_running = FALSE;

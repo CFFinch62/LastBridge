@@ -18,6 +18,7 @@ void create_display_options_panel(SerialTerminal *terminal, GtkWidget *parent);
 void create_appearance_panel(SerialTerminal *terminal, GtkWidget *parent);
 void create_file_operations_panel(SerialTerminal *terminal, GtkWidget *parent);
 void create_control_signals_panel(SerialTerminal *terminal, GtkWidget *parent);
+void create_signal_indicators(SerialTerminal *terminal, GtkWidget *parent);
 void create_data_area(SerialTerminal *terminal, GtkWidget *parent);
 
 // Appearance functions

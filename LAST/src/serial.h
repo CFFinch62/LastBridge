@@ -37,4 +37,10 @@ gboolean append_to_dual_display_idle(gpointer data);
 void set_control_signals(SerialTerminal *terminal);
 void send_break_signal(SerialTerminal *terminal);
 
+// Signal line indicator functions
+void update_indicator_color(GtkWidget *indicator, const char *color);
+gboolean update_signal_indicators(gpointer data);
+void start_signal_monitoring(SerialTerminal *terminal);
+void stop_signal_monitoring(SerialTerminal *terminal);
+
 #endif // SERIAL_H
