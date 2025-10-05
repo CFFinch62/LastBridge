@@ -13,6 +13,7 @@ The enhanced BRIDGE application now includes comprehensive serial data sniffing 
 - **Multiple Data Formats**: Raw binary, hex dump, or formatted text
 - **Professional Grade**: Comparable to expensive hardware serial analyzers
 - **Thread-safe Implementation**: Robust and reliable operation
+- **Laptop-Friendly GUI**: Optimized landscape layout for smaller screens
 
 ## Architecture
 
@@ -37,12 +38,12 @@ Device A ←→ /tmp/ttyDevice1 ←→ Enhanced BRIDGE ←→ /tmp/ttyDevice2 �
 
 ### 1. Basic Setup
 
-1. **Start BRIDGE**: Launch the enhanced BRIDGE application
+1. **Start BRIDGE**: Launch the enhanced BRIDGE application (optimized for laptop screens)
 2. **Configure Devices**: Set up your virtual device paths (e.g., `/tmp/ttyBBFF` and `/tmp/ttyLAST`)
-3. **Enable Sniffing**: Go to the "Sniffing" tab and check "Enable Serial Data Sniffing"
-4. **Select Output Methods**: Choose your desired output methods (TCP recommended for most use cases)
+3. **Enable Sniffing**: Go to the "Sniffing" tab and check "Enable Sniffing"
+4. **Select Output Methods**: Choose your desired output methods in the left column (TCP recommended)
 5. **Start Bridge**: Click "Start Virtual Null Modem" to create the devices
-6. **Start Sniffing**: Click "Start Sniffing" to begin data capture
+6. **Start Sniffing**: Click "Start" to begin data capture
 
 ### 2. Connect Your Applications
 
@@ -169,6 +170,24 @@ The enhanced BRIDGE works seamlessly with LAST:
 5. **Connect your device** to `/tmp/ttyBBFF`
 6. **Use LAST normally** for control and monitoring
 7. **Your sniffing client** receives all data in real-time
+
+## GUI Design
+
+The BRIDGE sniffing interface is optimized for laptop screens and smaller displays:
+
+### Layout Features
+- **Landscape-Oriented**: Horizontal two-column layout maximizes screen usage
+- **Compact Controls**: Efficient spacing and shorter labels reduce vertical space
+- **Organized Sections**:
+  - **Left Column**: Output methods and configuration options
+  - **Right Column**: Statistics and quick reference guide
+- **Laptop-Friendly**: Default window size (800x400) fits comfortably on most screens
+
+### User Interface Tips
+- All sniffing controls are accessible without scrolling
+- Output method checkboxes are clearly grouped with their configuration fields
+- Quick guide provides essential connection information at a glance
+- Statistics update in real-time during sniffing operations
 
 ## Performance Considerations
 

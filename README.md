@@ -35,6 +35,7 @@ A comprehensive serial communication solution consisting of two integrated appli
 - 📝 **Comprehensive Logging** - Detailed operation logs with timestamps
 - 💾 **Settings Persistence** - Configuration saved between sessions
 - 🎨 **Enhanced GUI** - Organized interface with Configuration, Status, Settings, and Sniffing tabs
+- 💻 **Laptop-Friendly Design** - Optimized landscape layout for smaller screens
 
 ## 🚀 Quick Start
 
