@@ -57,6 +57,7 @@ void create_main_window(BridgeApp *app) {
     // Create tabs
     create_configuration_tab(app, app->notebook);
     create_status_tab(app, app->notebook);
+    create_sniffing_tab(app, app->notebook);
     create_settings_tab(app, app->notebook);
 
     // Apply theme
@@ -240,6 +241,151 @@ void create_settings_tab(BridgeApp *app, GtkWidget *notebook) {
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, tab_label);
 }
 
+void create_sniffing_tab(BridgeApp *app, GtkWidget *notebook) {
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_container_set_border_width(GTK_CONTAINER(vbox), 15);
+
+    // Title
+    GtkWidget *title = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(title), "<b>Serial Data Sniffing</b>");
+    gtk_box_pack_start(GTK_BOX(vbox), title, FALSE, FALSE, 0);
+
+    // Enable sniffing frame
+    GtkWidget *enable_frame = gtk_frame_new("Sniffing Control");
+    gtk_box_pack_start(GTK_BOX(vbox), enable_frame, FALSE, FALSE, 0);
+
+    GtkWidget *enable_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_container_add(GTK_CONTAINER(enable_frame), enable_vbox);
+    gtk_container_set_border_width(GTK_CONTAINER(enable_vbox), 10);
+
+    app->sniffing_enable_check = gtk_check_button_new_with_label("Enable Serial Data Sniffing");
+    gtk_box_pack_start(GTK_BOX(enable_vbox), app->sniffing_enable_check, FALSE, FALSE, 0);
+
+    // Output methods frame
+    GtkWidget *output_frame = gtk_frame_new("Output Methods");
+    gtk_box_pack_start(GTK_BOX(vbox), output_frame, FALSE, FALSE, 0);
+
+    GtkWidget *output_grid = gtk_grid_new();
+    gtk_container_add(GTK_CONTAINER(output_frame), output_grid);
+    gtk_container_set_border_width(GTK_CONTAINER(output_grid), 10);
+    gtk_grid_set_row_spacing(GTK_GRID(output_grid), 5);
+    gtk_grid_set_column_spacing(GTK_GRID(output_grid), 10);
+
+    // Named Pipe
+    app->sniff_pipe_check = gtk_check_button_new_with_label("Named Pipe:");
+    gtk_grid_attach(GTK_GRID(output_grid), app->sniff_pipe_check, 0, 0, 1, 1);
+
+    app->sniff_pipe_entry = gtk_entry_new();
+    gtk_entry_set_text(GTK_ENTRY(app->sniff_pipe_entry), DEFAULT_SNIFF_PIPE);
+    gtk_grid_attach(GTK_GRID(output_grid), app->sniff_pipe_entry, 1, 0, 1, 1);
+
+    // TCP Socket
+    app->sniff_tcp_check = gtk_check_button_new_with_label("TCP Socket Port:");
+    gtk_grid_attach(GTK_GRID(output_grid), app->sniff_tcp_check, 0, 1, 1, 1);
+
+    app->sniff_tcp_port_entry = gtk_entry_new();
+    gtk_entry_set_text(GTK_ENTRY(app->sniff_tcp_port_entry), "8888");
+    gtk_grid_attach(GTK_GRID(output_grid), app->sniff_tcp_port_entry, 1, 1, 1, 1);
+
+    // UDP Socket
+    app->sniff_udp_check = gtk_check_button_new_with_label("UDP Address:");
+    gtk_grid_attach(GTK_GRID(output_grid), app->sniff_udp_check, 0, 2, 1, 1);
+
+    app->sniff_udp_addr_entry = gtk_entry_new();
+    gtk_entry_set_text(GTK_ENTRY(app->sniff_udp_addr_entry), DEFAULT_SNIFF_UDP_ADDR);
+    gtk_grid_attach(GTK_GRID(output_grid), app->sniff_udp_addr_entry, 1, 2, 1, 1);
+
+    GtkWidget *udp_port_label = gtk_label_new("UDP Port:");
+    gtk_grid_attach(GTK_GRID(output_grid), udp_port_label, 0, 3, 1, 1);
+
+    app->sniff_udp_port_entry = gtk_entry_new();
+    gtk_entry_set_text(GTK_ENTRY(app->sniff_udp_port_entry), "9999");
+    gtk_grid_attach(GTK_GRID(output_grid), app->sniff_udp_port_entry, 1, 3, 1, 1);
+
+    // Log File
+    app->sniff_file_check = gtk_check_button_new_with_label("Log File:");
+    gtk_grid_attach(GTK_GRID(output_grid), app->sniff_file_check, 0, 4, 1, 1);
+
+    app->sniff_file_entry = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(app->sniff_file_entry), "Auto-generated filename");
+    gtk_grid_attach(GTK_GRID(output_grid), app->sniff_file_entry, 1, 4, 1, 1);
+
+    // Configuration frame
+    GtkWidget *config_frame = gtk_frame_new("Sniffing Configuration");
+    gtk_box_pack_start(GTK_BOX(vbox), config_frame, FALSE, FALSE, 0);
+
+    GtkWidget *config_grid = gtk_grid_new();
+    gtk_container_add(GTK_CONTAINER(config_frame), config_grid);
+    gtk_container_set_border_width(GTK_CONTAINER(config_grid), 10);
+    gtk_grid_set_row_spacing(GTK_GRID(config_grid), 5);
+    gtk_grid_set_column_spacing(GTK_GRID(config_grid), 10);
+
+    // Data Direction
+    GtkWidget *direction_label = gtk_label_new("Data Direction:");
+    gtk_grid_attach(GTK_GRID(config_grid), direction_label, 0, 0, 1, 1);
+
+    app->sniff_direction_combo = gtk_combo_box_text_new();
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(app->sniff_direction_combo), "Both RX & TX");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(app->sniff_direction_combo), "RX Only");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(app->sniff_direction_combo), "TX Only");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(app->sniff_direction_combo), 0);
+    gtk_grid_attach(GTK_GRID(config_grid), app->sniff_direction_combo, 1, 0, 1, 1);
+
+    // Data Format
+    GtkWidget *format_label = gtk_label_new("Data Format:");
+    gtk_grid_attach(GTK_GRID(config_grid), format_label, 0, 1, 1, 1);
+
+    app->sniff_format_combo = gtk_combo_box_text_new();
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(app->sniff_format_combo), "Raw Binary");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(app->sniff_format_combo), "Hex Dump");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(app->sniff_format_combo), "Text");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(app->sniff_format_combo), 1); // Default to Hex
+    gtk_grid_attach(GTK_GRID(config_grid), app->sniff_format_combo, 1, 1, 1, 1);
+
+    // Control buttons frame
+    GtkWidget *control_frame = gtk_frame_new("Sniffing Control");
+    gtk_box_pack_start(GTK_BOX(vbox), control_frame, FALSE, FALSE, 0);
+
+    GtkWidget *control_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    gtk_container_add(GTK_CONTAINER(control_frame), control_hbox);
+    gtk_container_set_border_width(GTK_CONTAINER(control_hbox), 10);
+
+    app->sniff_start_button = gtk_button_new_with_label("Start Sniffing");
+    gtk_box_pack_start(GTK_BOX(control_hbox), app->sniff_start_button, FALSE, FALSE, 0);
+    gtk_widget_set_sensitive(app->sniff_start_button, FALSE);
+
+    app->sniff_stop_button = gtk_button_new_with_label("Stop Sniffing");
+    gtk_box_pack_start(GTK_BOX(control_hbox), app->sniff_stop_button, FALSE, FALSE, 0);
+    gtk_widget_set_sensitive(app->sniff_stop_button, FALSE);
+
+    // Statistics frame
+    GtkWidget *stats_frame = gtk_frame_new("Sniffing Statistics");
+    gtk_box_pack_start(GTK_BOX(vbox), stats_frame, FALSE, FALSE, 0);
+
+    app->sniff_stats_label = gtk_label_new("Sniffing inactive");
+    gtk_container_add(GTK_CONTAINER(stats_frame), app->sniff_stats_label);
+    gtk_container_set_border_width(GTK_CONTAINER(stats_frame), 10);
+
+    // Instructions frame
+    GtkWidget *sniff_instructions_frame = gtk_frame_new("Usage Instructions");
+    gtk_box_pack_start(GTK_BOX(vbox), sniff_instructions_frame, FALSE, FALSE, 0);
+
+    GtkWidget *sniff_instructions_label = gtk_label_new(
+        "1. Enable sniffing and select desired output methods\n"
+        "2. Configure output paths/ports as needed\n"
+        "3. Start the null modem bridge first\n"
+        "4. Click 'Start Sniffing' to begin data capture\n"
+        "5. Connect your applications to the bridge devices\n"
+        "6. All serial data will be streamed to selected outputs");
+    gtk_label_set_justify(GTK_LABEL(sniff_instructions_label), GTK_JUSTIFY_LEFT);
+    gtk_container_add(GTK_CONTAINER(sniff_instructions_frame), sniff_instructions_label);
+    gtk_container_set_border_width(GTK_CONTAINER(sniff_instructions_frame), 10);
+
+    // Add tab to notebook
+    GtkWidget *tab_label = gtk_label_new("Sniffing");
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, tab_label);
+}
+
 gboolean update_ui_state(gpointer data) {
     BridgeApp *app = (BridgeApp *)data;
     const char *status_text = "Unknown";
@@ -252,6 +398,7 @@ gboolean update_ui_state(gpointer data) {
             gtk_widget_set_sensitive(app->start_button, TRUE);
             gtk_widget_set_sensitive(app->stop_button, FALSE);
             gtk_widget_set_sensitive(app->test_button, FALSE);
+            gtk_widget_set_sensitive(app->sniff_start_button, FALSE);
             gtk_label_set_text(GTK_LABEL(app->devices_label), "None");
             break;
 
@@ -269,6 +416,8 @@ gboolean update_ui_state(gpointer data) {
             gtk_widget_set_sensitive(app->start_button, FALSE);
             gtk_widget_set_sensitive(app->stop_button, TRUE);
             gtk_widget_set_sensitive(app->test_button, TRUE);
+            gtk_widget_set_sensitive(app->sniff_start_button,
+                                   app->sniffing_enabled && !is_sniffing_active(app));
 
             char devices_text[512];
             snprintf(devices_text, sizeof(devices_text), "%.240s ↔ %.240s",

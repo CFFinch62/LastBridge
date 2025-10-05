@@ -10,9 +10,9 @@ GTK_LIBS = $(shell pkg-config --libs gtk+-3.0)
 
 # Source files
 SRCDIR = src
-SOURCES = $(SRCDIR)/main.c $(SRCDIR)/nullmodem.c $(SRCDIR)/ui.c $(SRCDIR)/utils.c $(SRCDIR)/callbacks.c $(SRCDIR)/settings.c
+SOURCES = $(SRCDIR)/main.c $(SRCDIR)/nullmodem.c $(SRCDIR)/sniffing.c $(SRCDIR)/ui.c $(SRCDIR)/utils.c $(SRCDIR)/callbacks.c $(SRCDIR)/settings.c
 OBJECTS = $(SOURCES:.c=.o)
-HEADERS = $(SRCDIR)/common.h $(SRCDIR)/nullmodem.h $(SRCDIR)/ui.h $(SRCDIR)/utils.h $(SRCDIR)/callbacks.h $(SRCDIR)/settings.h
+HEADERS = $(SRCDIR)/common.h $(SRCDIR)/nullmodem.h $(SRCDIR)/sniffing.h $(SRCDIR)/ui.h $(SRCDIR)/utils.h $(SRCDIR)/callbacks.h $(SRCDIR)/settings.h
 
 .PHONY: all clean install uninstall run check-deps help
 
