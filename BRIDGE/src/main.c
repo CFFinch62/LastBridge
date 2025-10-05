@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "nullmodem.h"
+#include "sniffing.h"
 #include "ui.h"
 #include "utils.h"
 #include "settings.h"
@@ -21,7 +22,10 @@ void cleanup_and_exit(int sig) {
         
         // Save settings
         save_settings(g_bridge_app);
-        
+
+        // Stop sniffing if active
+        cleanup_sniffing(g_bridge_app);
+
         // Stop null modem if running
         if (g_bridge_app->state == BRIDGE_STATE_RUNNING) {
             stop_null_modem(g_bridge_app);
@@ -57,7 +61,10 @@ int main(int argc, char *argv[]) {
     
     // Initialize default settings
     init_default_settings(&app);
-    
+
+    // Initialize sniffing
+    init_sniffing(&app);
+
     // Load saved settings
     load_settings(&app);
     

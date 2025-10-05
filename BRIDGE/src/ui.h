@@ -15,6 +15,7 @@ void append_log_message(BridgeApp *app, const char *message, gboolean timestamp)
 void clear_log(BridgeApp *app);
 void create_configuration_tab(BridgeApp *app, GtkWidget *notebook);
 void create_status_tab(BridgeApp *app, GtkWidget *notebook);
+void create_sniffing_tab(BridgeApp *app, GtkWidget *notebook);
 void create_settings_tab(BridgeApp *app, GtkWidget *notebook);
 void apply_ui_theme(BridgeApp *app);
 

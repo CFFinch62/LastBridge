@@ -5,6 +5,7 @@
 
 #include "callbacks.h"
 #include "nullmodem.h"
+#include "sniffing.h"
 #include "ui.h"
 #include "settings.h"
 #include "utils.h"
@@ -27,6 +28,17 @@ void connect_signals(BridgeApp *app) {
     g_signal_connect(app->auto_start_check, "toggled", G_CALLBACK(on_settings_changed), app);
     g_signal_connect(app->verbose_logging_check, "toggled", G_CALLBACK(on_settings_changed), app);
     g_signal_connect(app->device_permissions_combo, "changed", G_CALLBACK(on_settings_changed), app);
+
+    // Sniffing signals
+    g_signal_connect(app->sniffing_enable_check, "toggled", G_CALLBACK(on_sniffing_enable_toggled), app);
+    g_signal_connect(app->sniff_start_button, "clicked", G_CALLBACK(on_sniff_start_clicked), app);
+    g_signal_connect(app->sniff_stop_button, "clicked", G_CALLBACK(on_sniff_stop_clicked), app);
+    g_signal_connect(app->sniff_pipe_check, "toggled", G_CALLBACK(on_sniff_output_toggled), app);
+    g_signal_connect(app->sniff_tcp_check, "toggled", G_CALLBACK(on_sniff_output_toggled), app);
+    g_signal_connect(app->sniff_udp_check, "toggled", G_CALLBACK(on_sniff_output_toggled), app);
+    g_signal_connect(app->sniff_file_check, "toggled", G_CALLBACK(on_sniff_output_toggled), app);
+    g_signal_connect(app->sniff_direction_combo, "changed", G_CALLBACK(on_sniff_settings_changed), app);
+    g_signal_connect(app->sniff_format_combo, "changed", G_CALLBACK(on_sniff_settings_changed), app);
 }
 
 void on_start_button_clicked(GtkButton *button, gpointer user_data) {
@@ -201,7 +213,7 @@ gboolean show_error_dialog(gpointer data) {
 
 gboolean show_info_dialog(gpointer data) {
     const char *message = (const char *)data;
-    
+
     GtkWidget *dialog = gtk_message_dialog_new(NULL,
                                               GTK_DIALOG_MODAL,
                                               GTK_MESSAGE_INFO,
@@ -209,6 +221,120 @@ gboolean show_info_dialog(gpointer data) {
                                               "%s", message);
     gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
-    
+
     return FALSE; // Remove from idle queue
+}
+
+// Sniffing callback implementations
+void on_sniffing_enable_toggled(GtkToggleButton *button, gpointer user_data) {
+    BridgeApp *app = (BridgeApp *)user_data;
+    app->sniffing_enabled = gtk_toggle_button_get_active(button);
+
+    // Enable/disable sniffing controls based on checkbox state
+    gtk_widget_set_sensitive(app->sniff_start_button, app->sniffing_enabled && app->state == BRIDGE_STATE_RUNNING);
+
+    log_message(app, "Sniffing %s", app->sniffing_enabled ? "enabled" : "disabled");
+}
+
+void on_sniff_start_clicked(GtkButton *button, gpointer user_data) {
+    (void)button;
+    BridgeApp *app = (BridgeApp *)user_data;
+
+    // Update sniffing settings from UI
+    update_sniff_settings_from_ui(app);
+
+    if (start_sniffing(app)) {
+        gtk_widget_set_sensitive(app->sniff_start_button, FALSE);
+        gtk_widget_set_sensitive(app->sniff_stop_button, TRUE);
+    }
+}
+
+void on_sniff_stop_clicked(GtkButton *button, gpointer user_data) {
+    (void)button;
+    BridgeApp *app = (BridgeApp *)user_data;
+
+    stop_sniffing(app);
+    gtk_widget_set_sensitive(app->sniff_start_button, TRUE);
+    gtk_widget_set_sensitive(app->sniff_stop_button, FALSE);
+
+    // Update statistics display
+    gtk_label_set_text(GTK_LABEL(app->sniff_stats_label), "Sniffing stopped");
+}
+
+void on_sniff_output_toggled(GtkToggleButton *button, gpointer user_data) {
+    (void)button;
+    BridgeApp *app = (BridgeApp *)user_data;
+
+    // Update output methods from checkboxes
+    app->sniff_output_methods = SNIFF_OUTPUT_NONE;
+
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(app->sniff_pipe_check))) {
+        app->sniff_output_methods |= SNIFF_OUTPUT_PIPE;
+    }
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(app->sniff_tcp_check))) {
+        app->sniff_output_methods |= SNIFF_OUTPUT_TCP;
+    }
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(app->sniff_udp_check))) {
+        app->sniff_output_methods |= SNIFF_OUTPUT_UDP;
+    }
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(app->sniff_file_check))) {
+        app->sniff_output_methods |= SNIFF_OUTPUT_FILE;
+    }
+}
+
+void on_sniff_settings_changed(GtkWidget *widget, gpointer user_data) {
+    (void)widget;
+    BridgeApp *app = (BridgeApp *)user_data;
+
+    // Update settings from UI controls
+    update_sniff_settings_from_ui(app);
+}
+
+void update_sniff_settings_from_ui(BridgeApp *app) {
+    // Update output methods
+    app->sniff_output_methods = SNIFF_OUTPUT_NONE;
+
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(app->sniff_pipe_check))) {
+        app->sniff_output_methods |= SNIFF_OUTPUT_PIPE;
+        const char *pipe_path = gtk_entry_get_text(GTK_ENTRY(app->sniff_pipe_entry));
+        strncpy(app->sniff_pipe_path, pipe_path, MAX_PATH_LENGTH - 1);
+    }
+
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(app->sniff_tcp_check))) {
+        app->sniff_output_methods |= SNIFF_OUTPUT_TCP;
+        const char *tcp_port = gtk_entry_get_text(GTK_ENTRY(app->sniff_tcp_port_entry));
+        app->sniff_tcp_port = atoi(tcp_port);
+    }
+
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(app->sniff_udp_check))) {
+        app->sniff_output_methods |= SNIFF_OUTPUT_UDP;
+        const char *udp_addr = gtk_entry_get_text(GTK_ENTRY(app->sniff_udp_addr_entry));
+        const char *udp_port = gtk_entry_get_text(GTK_ENTRY(app->sniff_udp_port_entry));
+        strncpy(app->sniff_udp_addr, udp_addr, 63);
+        app->sniff_udp_port = atoi(udp_port);
+    }
+
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(app->sniff_file_check))) {
+        app->sniff_output_methods |= SNIFF_OUTPUT_FILE;
+        const char *log_file = gtk_entry_get_text(GTK_ENTRY(app->sniff_file_entry));
+        strncpy(app->sniff_log_file, log_file, MAX_PATH_LENGTH - 1);
+    }
+
+    // Update direction setting
+    int direction_index = gtk_combo_box_get_active(GTK_COMBO_BOX(app->sniff_direction_combo));
+    switch (direction_index) {
+        case 0: app->sniff_direction = SNIFF_DIRECTION_BOTH; break;
+        case 1: app->sniff_direction = SNIFF_DIRECTION_RX_ONLY; break;
+        case 2: app->sniff_direction = SNIFF_DIRECTION_TX_ONLY; break;
+        default: app->sniff_direction = SNIFF_DIRECTION_BOTH; break;
+    }
+
+    // Update format setting
+    int format_index = gtk_combo_box_get_active(GTK_COMBO_BOX(app->sniff_format_combo));
+    switch (format_index) {
+        case 0: app->sniff_format = SNIFF_FORMAT_RAW; break;
+        case 1: app->sniff_format = SNIFF_FORMAT_HEX; break;
+        case 2: app->sniff_format = SNIFF_FORMAT_TEXT; break;
+        default: app->sniff_format = SNIFF_FORMAT_HEX; break;
+    }
 }

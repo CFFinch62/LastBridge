@@ -22,14 +22,20 @@ A comprehensive serial communication solution consisting of two integrated appli
 - 🎨 **Professional GUI** - Clean, intuitive GTK3 interface with flexible layout
 - 🔗 **BRIDGE Integration** - Launch virtual null modem directly from menu
 
-### BRIDGE - Virtual Null Modem Bridge
+### BRIDGE - Virtual Null Modem Bridge & Serial Sniffer
 - 🔗 **Virtual Device Creation** - Creates paired virtual serial devices using socat
+- 🕵️ **Universal Serial Sniffing** - Professional-grade serial data capture and analysis
+- 📡 **Multiple Output Methods** - Named pipes, TCP sockets, UDP streams, file logging
+- 🎯 **Real-time Data Streaming** - Live data feeds for external applications
+- 🔍 **Configurable Filtering** - RX only, TX only, or bidirectional capture
+- 📊 **Multiple Data Formats** - Raw binary, hex dump, or formatted text output
 - ⚙️ **Configurable Paths** - Customize device paths (default: `/tmp/ttyV0` ↔ `/tmp/ttyV1`)
 - 🧪 **Communication Testing** - Built-in testing to verify device functionality
 - 📊 **Real-time Monitoring** - Process health checking and status display
 - 📝 **Comprehensive Logging** - Detailed operation logs with timestamps
 - 💾 **Settings Persistence** - Configuration saved between sessions
-- 🎨 **Tabbed Interface** - Organized GUI with Configuration, Status, and Settings tabs
+- 🎨 **Enhanced GUI** - Organized interface with Configuration, Status, Settings, and Sniffing tabs
+- 💻 **Laptop-Friendly Design** - Optimized landscape layout for smaller screens
 
 ## 🚀 Quick Start
 
@@ -66,6 +72,45 @@ make
 2. **Start LAST**: Use **Tools → BRIDGE** menu or run separately
 3. **Connect**: In LAST, connect to `/tmp/ttyV0` or `/tmp/ttyV1`
 4. **Test**: Send data between virtual devices
+
+## 🕵️ Serial Data Sniffing
+
+BRIDGE now includes professional-grade serial data sniffing capabilities, making it a universal serial communication analyzer:
+
+### Sniffing Architecture
+```
+Device A ←→ /tmp/ttyDevice1 ←→ Enhanced BRIDGE ←→ /tmp/ttyDevice2 ←→ Device B
+                                        ↓
+                               Data Sniffing Layer
+                                        ↓
+                    ┌─────────────────────────────────┐
+                    │  Multiple Output Streams        │
+                    ├─────────────────────────────────┤
+                    │ • Named Pipe: /tmp/bridge_sniff │
+                    │ • TCP Socket: localhost:8888    │
+                    │ • UDP Stream: 239.1.1.1:9999   │
+                    │ • File Output: bridge_data.log  │
+                    └─────────────────────────────────┘
+                                        ↓
+                          External Processing Applications
+```
+
+### Use Cases
+- **Marine Electronics**: BBFF video data processing with LAST control
+- **Protocol Analysis**: Reverse engineer proprietary serial protocols
+- **Device Debugging**: Monitor communication between devices and software
+- **Data Logging**: Record serial sessions for offline analysis
+- **Multi-app Integration**: One device feeding multiple applications
+
+### Quick Sniffing Setup
+1. Launch BRIDGE and go to the "Sniffing" tab
+2. Enable sniffing and select output methods (TCP recommended)
+3. Start the bridge and begin sniffing
+4. Connect your devices to the virtual ports
+5. Connect your analysis application to the sniffing output
+6. Monitor real-time data flow
+
+For detailed sniffing documentation, see [`BRIDGE/SNIFFING_GUIDE.md`](BRIDGE/SNIFFING_GUIDE.md).
 
 ## 📋 System Requirements
 

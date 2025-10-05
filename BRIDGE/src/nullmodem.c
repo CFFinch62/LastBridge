@@ -4,6 +4,7 @@
  */
 
 #include "nullmodem.h"
+#include "sniffing.h"
 #include "utils.h"
 
 gboolean check_socat_available(void) {
@@ -29,11 +30,24 @@ gboolean create_null_modem(BridgeApp *app) {
     // Clean up any existing devices
     cleanup_devices(app);
 
-    // Build socat command
+    // Build socat command with optional data capture
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), 
-        "socat -d -d pty,raw,echo=0,link=%s pty,raw,echo=0,link=%s",
-        app->device1_path, app->device2_path);
+    if (app->sniffing_enabled) {
+        // Create temporary capture file for sniffing
+        char capture_file[MAX_PATH_LENGTH];
+        snprintf(capture_file, sizeof(capture_file), "/tmp/bridge_capture_%d.log", getpid());
+
+        snprintf(cmd, sizeof(cmd),
+            "socat -d -d -x pty,raw,echo=0,link=%s pty,raw,echo=0,link=%s 2>%s",
+            app->device1_path, app->device2_path, capture_file);
+
+        // Store capture file path for monitoring
+        strncpy(app->capture_file_path, capture_file, MAX_PATH_LENGTH - 1);
+    } else {
+        snprintf(cmd, sizeof(cmd),
+            "socat -d -d pty,raw,echo=0,link=%s pty,raw,echo=0,link=%s",
+            app->device1_path, app->device2_path);
+    }
 
     log_message(app, "Starting socat: %s", cmd);
 
