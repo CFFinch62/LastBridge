@@ -10,6 +10,10 @@
 #include "ui.h"
 #include "settings.h"
 
+// Forward declarations for macro chaining
+void send_single_command(SerialTerminal *terminal, const char *command, gboolean add_line_ending);
+void send_macro_command_parts(SerialTerminal *terminal, const char *command, int macro_index);
+
 // Connection callbacks
 void on_connect_clicked(GtkWidget *widget, gpointer data) {
     (void)widget;
@@ -702,6 +706,69 @@ void connect_signals(SerialTerminal *terminal) {
     g_signal_connect(terminal->window, "destroy", G_CALLBACK(on_window_destroy), terminal);
 }
 
+void send_single_command(SerialTerminal *terminal, const char *command, gboolean add_line_ending) {
+    if (!terminal || !command || !terminal->connected || strlen(command) == 0) return;
+
+    // Send the command
+    ssize_t bytes_written = write(terminal->serial_fd, command, strlen(command));
+    if (bytes_written > 0) {
+        terminal->bytes_sent += bytes_written;
+        // Mark TX activity
+        terminal->tx_active = TRUE;
+        terminal->tx_last_activity = time(NULL);
+    }
+
+    // Add line ending if requested and configured
+    if (add_line_ending && terminal->line_ending && strlen(terminal->line_ending) > 0) {
+        bytes_written = write(terminal->serial_fd, terminal->line_ending, strlen(terminal->line_ending));
+        if (bytes_written > 0) {
+            terminal->bytes_sent += bytes_written;
+            // Mark TX activity for line ending too
+            terminal->tx_active = TRUE;
+            terminal->tx_last_activity = time(NULL);
+        }
+    }
+
+    // Log to file if enabled
+    if (terminal->log_file) {
+        char *timestamp = get_current_timestamp();
+        fprintf(terminal->log_file, "[%s] TX: %s\n", timestamp, command);
+        fflush(terminal->log_file);
+        free(timestamp);
+    }
+
+    // Local echo if enabled
+    if (terminal->local_echo) {
+        char echo_text[1024];
+        snprintf(echo_text, sizeof(echo_text), "TX: %s", command);
+        append_to_receive_text(terminal, echo_text, FALSE);
+    }
+}
+
+void send_macro_command_parts(SerialTerminal *terminal, const char *command, int macro_index) {
+    if (!terminal || !command || !terminal->connected) return;
+
+    // Parse command into parts to handle macro chaining properly
+    MacroParts *parts = parse_macro_command(terminal, command, macro_index);
+    if (!parts) {
+        // Fallback to sending as single command
+        send_single_command(terminal, command, TRUE);
+        return;
+    }
+
+    // Send each part
+    for (int i = 0; i < parts->count; i++) {
+        if (parts->parts[i] && strlen(parts->parts[i]) > 0) {
+            // Each macro reference gets its own line ending
+            // Regular text parts are combined until the next macro reference
+            gboolean add_ending = parts->is_macro_ref[i] || (i == parts->count - 1);
+            send_single_command(terminal, parts->parts[i], add_ending);
+        }
+    }
+
+    free_macro_parts(parts);
+}
+
 void on_macro_button_clicked(GtkWidget *widget, gpointer data) {
     SerialTerminal *terminal = (SerialTerminal *)data;
 
@@ -717,40 +784,8 @@ void on_macro_button_clicked(GtkWidget *widget, gpointer data) {
 
     // Only send if command is not empty
     if (strlen(command) > 0) {
-        // Send the command
-        ssize_t bytes_written = write(terminal->serial_fd, command, strlen(command));
-        if (bytes_written > 0) {
-            terminal->bytes_sent += bytes_written;
-            // Mark TX activity
-            terminal->tx_active = TRUE;
-            terminal->tx_last_activity = time(NULL);
-        }
-
-        // Add line ending if configured
-        if (terminal->line_ending && strlen(terminal->line_ending) > 0) {
-            bytes_written = write(terminal->serial_fd, terminal->line_ending, strlen(terminal->line_ending));
-            if (bytes_written > 0) {
-                terminal->bytes_sent += bytes_written;
-                // Mark TX activity for line ending too
-                terminal->tx_active = TRUE;
-                terminal->tx_last_activity = time(NULL);
-            }
-        }
-
-        // Log to file if enabled
-        if (terminal->log_file) {
-            char *timestamp = get_current_timestamp();
-            fprintf(terminal->log_file, "[%s] TX: %s\n", timestamp, command);
-            fflush(terminal->log_file);
-            free(timestamp);
-        }
-
-        // Local echo if enabled
-        if (terminal->local_echo) {
-            char echo_text[1024];
-            snprintf(echo_text, sizeof(echo_text), "TX: %s", command);
-            append_to_receive_text(terminal, echo_text, FALSE);
-        }
+        // Send the command with macro chaining support
+        send_macro_command_parts(terminal, command, macro_index);
     }
 }
 

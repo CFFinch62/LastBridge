@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Command storage (up to 256 characters per command)
   - Persistent settings saved between application launches
   - Professional scrollable layout with 180x30 pixel buttons
+- **Macro Chaining System** 🆕 - Reference other macros within macro commands
+  - Flexible syntax: `{1}` (by number), `{macro1}` (by label), `{Macro 1}` (by custom name)
+  - Recursive expansion with infinite loop protection
+  - Each referenced macro sends with individual CR-LF line endings
+  - Perfect for building complex marine electronics command sequences
 - **Macro Panel Toggle** - Show/hide macro panel for flexible screen usage
   - Menu option: "Macros" → "Show/Hide Macro Panel"
   - Dynamic layout adjustment - data areas expand when macros hidden
@@ -44,8 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Use Cases
 - **Marine Electronics Testing**: Quick access to fish finder, GPS, and autopilot commands
-- **Protocol Development**: Rapid testing of command sequences
+- **Complex Command Sequences**: Chain multiple commands with proper line endings
+- **Protocol Development**: Rapid testing of command sequences with macro building blocks
 - **Device Configuration**: Store and replay complex configuration commands
+- **Modular Command Building**: Create reusable command components that can be combined
 - **Debugging**: Quick transmission of test patterns and diagnostic commands
 
 ## [1.0.0] - 2025-01-XX

@@ -156,6 +156,35 @@ Streamline your workflow with 16 customizable macro buttons:
 3. **View Transmission** - see "TX: command" in received data (if local echo enabled)
 4. **Monitor Response** - device responses appear in real-time
 
+#### **Macro Chaining** 🆕
+Build complex command sequences by referencing other macros within macro commands:
+
+**Reference Syntax:**
+- `{1}` - Reference macro by number (1-based numbering)
+- `{macro1}` - Reference by default label format
+- `{Macro 1}` - Reference by custom label name
+
+**Example Usage:**
+```
+Macro 1: "!Q"
+Macro 2: "{1}!AP,0"
+Macro 3: "{Macro 1}!TR,51"
+Macro 4: "{1}{2}!VD,480"
+```
+
+**Execution Behavior:**
+- Each referenced macro sends with its own CR-LF line ending
+- Supports nested references (macros referencing other macros)
+- Infinite loop protection prevents circular references
+- Perfect for building complex marine electronics command sequences
+
+**Marine Electronics Example:**
+```
+Base Query: "!Q"                    (Get device status)
+Start AP: "{Base Query}!AP,1"       (Query status, then start autopilot)
+Full Setup: "{Start AP}!TR,51!VD,480" (Complete initialization sequence)
+```
+
 #### **Panel Management**
 - **Show Panel**: "Macros" → "Show/Hide Macro Panel" (default: visible)
 - **Hide Panel**: Same menu option - gives more space to data display areas
@@ -198,6 +227,7 @@ Streamline your workflow with 16 customizable macro buttons:
 | **Repeat file sending** | ❌ | ❌ | ✅ 🆕 |
 | **Configurable intervals** | ❌ | ❌ | ✅ 🆕 |
 | **Programmable macros** | ❌ | ❌ | ✅ 🆕 |
+| **Macro chaining** | ❌ | ❌ | ✅ 🆕 |
 | **Macro panel toggle** | ❌ | ❌ | ✅ 🆕 |
 | Data logging | ❌ | ✅ | ✅ |
 | Control signals | ✅ | ✅ | ✅ |
