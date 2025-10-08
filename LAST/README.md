@@ -27,6 +27,17 @@ A full-featured serial terminal application built from the working low-level ser
 - ✅ **Real-time data** - non-blocking network I/O for continuous streams
 - ✅ **Unified interface** - same display and logging features as serial connections
 
+### **Lua Scripting Engine** 🆕
+- ✅ **Embedded Lua 5.4.7** - Full scripting capabilities with zero external dependencies
+- ✅ **Event-driven processing** - Scripts execute on data receive, send, connect, and disconnect events
+- ✅ **Marine electronics API** - Built-in NMEA parsing, checksum calculation, and sentence creation
+- ✅ **Data transformation** - Modify, filter, or suppress incoming and outgoing data streams
+- ✅ **Separate script window** - Dedicated 800x600 interface for script development and testing
+- ✅ **Script management** - Load, save, test, and clear scripts with comprehensive file operations
+- ✅ **Real-time execution** - Scripts process data in real-time without blocking communication
+- ✅ **Error handling** - Comprehensive error reporting and graceful script failure recovery
+- ✅ **Comprehensive documentation** - Detailed scripting guide with examples ([SCRIPTING_GUIDE.md](SCRIPTING_GUIDE.md))
+
 ### **Advanced Display Features**
 - ✅ **Dual display mode** - simultaneous text and hex data display 🆕
 - ✅ **Hex display mode** - view data in hexadecimal format with configurable bytes per line
@@ -219,6 +230,73 @@ Full Setup: "{Start AP}!TR,51!VD,480" (Complete initialization sequence)
 - **Real testing** - verifies device accessibility
 - **No artificial restrictions** - includes virtual and non-standard devices
 
+## 🔧 **Lua Scripting API**
+
+### **Event Handlers**
+```lua
+function on_data_received(data)
+    -- Process incoming data
+    -- Return: modified_data, suppress_original
+    return nil, false  -- Don't modify, don't suppress
+end
+
+function on_data_send(data)
+    -- Process outgoing data before transmission
+    -- Return: modified_data, suppress_original
+    return nil, false  -- Don't modify, don't suppress
+end
+
+function on_connection_open()
+    -- Execute when connection is established
+    log("Connection established!")
+end
+
+function on_connection_close()
+    -- Execute when connection is closed
+    log("Connection closed!")
+end
+```
+
+### **API Functions**
+- **`log(message)`** - Add messages to terminal log
+- **`send(data)`** - Send data through current connection
+- **`get_connection_info()`** - Get connection details (type, host, port, baud rate)
+- **`get_statistics()`** - Get connection statistics (bytes sent/received, duration)
+- **`calculate_checksum(data)`** - Calculate NMEA checksum
+- **`parse_nmea(sentence)`** - Parse NMEA sentences into structured data
+- **`create_nmea(talker, type, fields)`** - Create NMEA sentences with checksum
+
+### **Marine Electronics Examples**
+```lua
+-- NMEA GPS data processing
+function on_data_received(data)
+    local nmea = parse_nmea(data)
+    if nmea and nmea.type == "GGA" then
+        log("GPS Position: " .. (nmea.fields[2] or "unknown"))
+    end
+    return nil, false
+end
+
+-- Automatic device response
+function on_data_received(data)
+    if string.find(data, "!Q") then
+        send("!AP,1")  -- Auto-start autopilot on query
+        log("Auto-started autopilot")
+    end
+    return nil, false
+end
+
+-- Data filtering
+function on_data_received(data)
+    if string.find(data, "DEBUG") then
+        return nil, true  -- Suppress debug messages
+    end
+    return nil, false
+end
+```
+
+📖 **For comprehensive scripting documentation, see [SCRIPTING_GUIDE.md](SCRIPTING_GUIDE.md)**
+
 ## 📋 **Comparison with Other Terminals**
 
 | Feature | cutecom | moserial | LAST Terminal |
@@ -242,6 +320,10 @@ Full Setup: "{Start AP}!TR,51!VD,480" (Complete initialization sequence)
 | **TCP/UDP connectivity** | ❌ | ❌ | ✅ 🆕 |
 | **Network client/server** | ❌ | ❌ | ✅ 🆕 |
 | **NMEA over Ethernet** | ❌ | ❌ | ✅ 🆕 |
+| **Lua scripting engine** | ❌ | ❌ | ✅ 🆕 |
+| **Event-driven processing** | ❌ | ❌ | ✅ 🆕 |
+| **NMEA parsing/creation** | ❌ | ❌ | ✅ 🆕 |
+| **Data transformation** | ❌ | ❌ | ✅ 🆕 |
 | Data logging | ❌ | ✅ | ✅ |
 | Control signals | ✅ | ✅ | ✅ |
 | Statistics | ❌ | ❌ | ✅ |

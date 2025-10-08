@@ -183,6 +183,20 @@ typedef struct {
     char *saved_network_host;
     char *saved_network_port;
 
+    // Scripting engine
+    void *lua_state;                    // lua_State* (void* to avoid including lua.h here)
+    gboolean scripting_enabled;
+    char *script_content;
+
+    // Script UI widgets
+    GtkWidget *script_window;
+    GtkWidget *script_text_view;
+    GtkWidget *script_load_button;
+    GtkWidget *script_save_button;
+    GtkWidget *script_clear_button;
+    GtkWidget *script_enable_check;
+    GtkWidget *script_test_button;
+
     // File logging
     FILE *log_file;
     char *log_filename;

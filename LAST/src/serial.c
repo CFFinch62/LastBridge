@@ -4,6 +4,7 @@
  */
 
 #include "serial.h"
+#include "scripting.h"
 
 void scan_all_serial_devices(GtkComboBoxText *combo) {
     // Clear existing items
@@ -260,6 +261,27 @@ void *read_thread_func(void *arg) {
                 terminal->rx_active = TRUE;
                 terminal->rx_last_activity = time(NULL);
 
+                // Execute script on received data if enabled
+                char *display_data = buffer;
+                size_t display_length = bytes_read;
+                gboolean suppress_display = FALSE;
+                ScriptResult *script_result = NULL;
+
+                if (terminal->scripting_enabled) {
+                    script_result = scripting_execute_on_data_received(terminal, buffer, bytes_read);
+                    if (script_result) {
+                        if (script_result->success) {
+                            if (script_result->result_data) {
+                                display_data = script_result->result_data;
+                                display_length = script_result->result_length;
+                            }
+                            suppress_display = script_result->suppress_original;
+                        } else if (script_result->error_message) {
+                            g_print("Script error on data received: %s\n", script_result->error_message);
+                        }
+                    }
+                }
+
                 // Log to file if enabled
                 if (terminal->log_file) {
                     char *timestamp = get_current_timestamp();
@@ -270,12 +292,19 @@ void *read_thread_func(void *arg) {
                     free(timestamp);
                 }
 
-                // Create dual display data structure
-                DualDisplayData *dual_data = malloc(sizeof(DualDisplayData));
-                dual_data->text_data = format_data_for_display(buffer, bytes_read, FALSE); // Always format as text
-                dual_data->hex_data = format_data_for_display(buffer, bytes_read, TRUE);   // Always format as hex
-                dual_data->show_hex = terminal->hex_display;
-                g_idle_add(append_to_dual_display_idle, dual_data);
+                // Create dual display data structure (only if not suppressed by script)
+                if (!suppress_display) {
+                    DualDisplayData *dual_data = malloc(sizeof(DualDisplayData));
+                    dual_data->text_data = format_data_for_display(display_data, display_length, FALSE); // Always format as text
+                    dual_data->hex_data = format_data_for_display(display_data, display_length, TRUE);   // Always format as hex
+                    dual_data->show_hex = terminal->hex_display;
+                    g_idle_add(append_to_dual_display_idle, dual_data);
+                }
+
+                // Clean up script result
+                if (script_result) {
+                    scripting_free_result(script_result);
+                }
             }
         }
     }

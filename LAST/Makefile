@@ -8,21 +8,31 @@ TARGET = last
 GTK_CFLAGS = $(shell pkg-config --cflags gtk+-3.0)
 GTK_LIBS = $(shell pkg-config --libs gtk+-3.0)
 
+# Lua configuration
+LUA_DIR = lua/lua-5.4.7
+LUA_LIB = $(LUA_DIR)/src/liblua.a
+LUA_CFLAGS = -I$(LUA_DIR)/src
+LUA_LIBS = $(LUA_LIB) -lm -ldl
+
 # Source files
 SRCDIR = src
-SOURCES = $(SRCDIR)/main.c $(SRCDIR)/serial.c $(SRCDIR)/network.c $(SRCDIR)/ui.c $(SRCDIR)/file_ops.c $(SRCDIR)/utils.c $(SRCDIR)/callbacks.c $(SRCDIR)/settings.c
+SOURCES = $(SRCDIR)/main.c $(SRCDIR)/serial.c $(SRCDIR)/network.c $(SRCDIR)/scripting.c $(SRCDIR)/ui.c $(SRCDIR)/file_ops.c $(SRCDIR)/utils.c $(SRCDIR)/callbacks.c $(SRCDIR)/settings.c
 OBJECTS = $(SOURCES:.c=.o)
-HEADERS = $(SRCDIR)/common.h $(SRCDIR)/serial.h $(SRCDIR)/network.h $(SRCDIR)/ui.h $(SRCDIR)/file_ops.h $(SRCDIR)/utils.h $(SRCDIR)/callbacks.h $(SRCDIR)/settings.h
+HEADERS = $(SRCDIR)/common.h $(SRCDIR)/serial.h $(SRCDIR)/network.h $(SRCDIR)/scripting.h $(SRCDIR)/ui.h $(SRCDIR)/file_ops.h $(SRCDIR)/utils.h $(SRCDIR)/callbacks.h $(SRCDIR)/settings.h
 
 .PHONY: all clean install uninstall run check-deps help
 
-all: check-deps $(TARGET)
+all: check-deps $(LUA_LIB) $(TARGET)
 
-$(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS) $(GTK_LIBS) -lpthread
+$(LUA_LIB):
+	@echo "Building Lua library..."
+	cd $(LUA_DIR) && $(MAKE) linux
+
+$(TARGET): $(OBJECTS) $(LUA_LIB)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS) $(GTK_LIBS) $(LUA_LIBS) -lpthread
 
 %.o: %.c $(HEADERS)
-	$(CC) $(CFLAGS) $(GTK_CFLAGS) -I$(SRCDIR) -c $< -o $@
+	$(CC) $(CFLAGS) $(GTK_CFLAGS) $(LUA_CFLAGS) -I$(SRCDIR) -c $< -o $@
 
 check-deps:
 	@echo "Checking dependencies..."
@@ -32,6 +42,7 @@ check-deps:
 clean:
 	rm -f $(OBJECTS) $(TARGET)
 	rm -f $(SRCDIR)/*.o
+	cd $(LUA_DIR) && $(MAKE) clean 2>/dev/null || true
 
 install: $(TARGET)
 	sudo cp $(TARGET) /usr/local/bin/

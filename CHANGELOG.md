@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Lua Scripting Engine** - Embedded Lua 5.4.7 for custom data processing
+  - Event-driven script execution on data receive, send, connect, and disconnect
+  - Comprehensive API for terminal control and marine electronics
+  - NMEA parsing, checksum calculation, and sentence creation functions
+  - Separate script window (800x600) for development and testing
+  - Script management with load, save, test, and clear operations
+  - Real-time data transformation and filtering capabilities
+  - Zero external dependencies - Lua compiled directly into executable
+  - Comprehensive scripting documentation with marine electronics examples
+- **Optimized Window Layout** - Compact main window for 1366x768 laptop compatibility
+  - Main window restored to compact 1200x600 size (down from previous 1280x720)
+  - Minimum window size set to 1000x500 for smaller screens
+  - Script interface moved to separate 800x600 window to save main window space
+  - Maintains all functionality while fitting standard laptop screens
 - **Programmable Macro System** - 16 customizable macro buttons for quick command transmission
   - Custom button labels (up to 32 characters each)
   - Command storage (up to 256 characters per command)

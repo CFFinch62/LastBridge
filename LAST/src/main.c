@@ -11,6 +11,7 @@
 #include "utils.h"
 #include "settings.h"
 #include "callbacks.h"
+#include "scripting.h"
 
 // Global terminal instance (defined here, declared in common.h)
 SerialTerminal *g_terminal = NULL;
@@ -94,6 +95,14 @@ int main(int argc, char *argv[]) {
     terminal.bytes_sent = 0;
     terminal.bytes_received = 0;
 
+    // Initialize scripting engine
+    terminal.scripting_enabled = FALSE;
+    terminal.script_content = NULL;
+    terminal.script_window = NULL;
+    if (!scripting_init(&terminal)) {
+        g_warning("Failed to initialize Lua scripting engine");
+    }
+
     // Load settings before creating UI
     load_settings(&terminal);
 
@@ -117,6 +126,11 @@ int main(int argc, char *argv[]) {
 
     // Show window
     gtk_widget_show_all(terminal.window);
+
+    // Debug: Check window size after showing
+    int width, height;
+    gtk_window_get_size(GTK_WINDOW(terminal.window), &width, &height);
+    printf("DEBUG: Window size after gtk_widget_show_all: %dx%d\n", width, height);
 
     // Run main loop
     gtk_main();

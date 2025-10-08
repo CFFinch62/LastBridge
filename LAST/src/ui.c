@@ -8,33 +8,27 @@
 #include "settings.h"
 
 void create_main_interface(SerialTerminal *terminal) {
-    // Create main window - adjust for total height including decorations to be max 720px
+    // Create main window
     terminal->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(terminal->window), "LAST - Linux Advanced Serial Terminal");
 
-    // Set window size to exactly 720px total height for laptop compatibility
-    gtk_window_set_default_size(GTK_WINDOW(terminal->window), 1280, 720);
+    // Set reasonable default size that fits 1366x768 screens (with taskbar ~40px)
+    // Default to 1200x600 which leaves room for window decorations and taskbar
+    printf("DEBUG: Setting window default size to 1200x600\n");
+    gtk_window_set_default_size(GTK_WINDOW(terminal->window), 1200, 600);
 
-    // Set minimum window size to prevent resizing below usable dimensions
-    gtk_widget_set_size_request(terminal->window, 1280, 720);
-
-    // Try to force the window to be exactly 720px high
-    gtk_window_resize(GTK_WINDOW(terminal->window), 1280, 720);
-
-    // Ensure window is resizable for larger screens and has maximize button
+    // Make window fully resizable - no minimum size constraints
     gtk_window_set_resizable(GTK_WINDOW(terminal->window), TRUE);
 
-    // Enable maximize button by setting window type hint
+    // Set normal window type hint for proper window manager treatment
     gtk_window_set_type_hint(GTK_WINDOW(terminal->window), GDK_WINDOW_TYPE_HINT_NORMAL);
 
-    // Set geometry hints to control window sizing
+    // CRITICAL: Set geometry hints to PREVENT window from growing beyond default size
     GdkGeometry geometry;
-    geometry.min_width = 1280;
-    geometry.min_height = 720;
     geometry.max_width = -1;  // No maximum width
-    geometry.max_height = -1; // No maximum height
+    geometry.max_height = 700; // Maximum height to fit 768px screen
     gtk_window_set_geometry_hints(GTK_WINDOW(terminal->window), NULL, &geometry,
-                                  GDK_HINT_MIN_SIZE);
+                                  GDK_HINT_MAX_SIZE);
 
     // Center the window on screen
     gtk_window_set_position(GTK_WINDOW(terminal->window), GTK_WIN_POS_CENTER);
@@ -129,6 +123,11 @@ void create_main_interface(SerialTerminal *terminal) {
 
     terminal->stats_label = gtk_label_new("Sent: 0 | Received: 0 | Time: 00:00:00");
     gtk_box_pack_start(GTK_BOX(status_hbox), terminal->stats_label, FALSE, FALSE, 5);
+
+    // Debug: Check window size after UI is built
+    int width, height;
+    gtk_window_get_size(GTK_WINDOW(terminal->window), &width, &height);
+    printf("DEBUG: Window size after UI creation: %dx%d\n", width, height);
 }
 
 void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
@@ -751,6 +750,10 @@ void create_menu_bar(SerialTerminal *terminal, GtkWidget *parent) {
     gtk_menu_shell_append(GTK_MENU_SHELL(terminal->tools_menu), bridge_item);
     g_signal_connect(bridge_item, "activate", G_CALLBACK(on_tools_bridge_activate), terminal);
 
+    GtkWidget *scripting_item = gtk_menu_item_new_with_label("Lua Scripting...");
+    gtk_menu_shell_append(GTK_MENU_SHELL(terminal->tools_menu), scripting_item);
+    g_signal_connect(scripting_item, "activate", G_CALLBACK(on_tools_scripting_activate), terminal);
+
     // Macros menu
     GtkWidget *macros_menu_item = gtk_menu_item_new_with_label("Macros");
     gtk_menu_shell_append(GTK_MENU_SHELL(terminal->menu_bar), macros_menu_item);
@@ -984,4 +987,112 @@ void toggle_macro_panel_visibility(SerialTerminal *terminal) {
 
     // Save the visibility state
     save_settings(terminal);
+}
+
+void create_scripting_window(SerialTerminal *terminal) {
+    // Don't create multiple windows
+    if (terminal->script_window) {
+        gtk_window_present(GTK_WINDOW(terminal->script_window));
+        return;
+    }
+
+    // Create scripting window
+    terminal->script_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(terminal->script_window), "Lua Scripting Engine");
+    gtk_window_set_default_size(GTK_WINDOW(terminal->script_window), 800, 600);
+    gtk_window_set_transient_for(GTK_WINDOW(terminal->script_window), GTK_WINDOW(terminal->window));
+    gtk_window_set_position(GTK_WINDOW(terminal->script_window), GTK_WIN_POS_CENTER_ON_PARENT);
+
+    // Create main container
+    GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_container_add(GTK_CONTAINER(terminal->script_window), main_vbox);
+    gtk_container_set_border_width(GTK_CONTAINER(main_vbox), 10);
+
+    // Create toolbar
+    GtkWidget *toolbar_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(main_vbox), toolbar_hbox, FALSE, FALSE, 0);
+
+    // Enable/Disable scripting checkbox
+    terminal->script_enable_check = gtk_check_button_new_with_label("Enable Scripting");
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(terminal->script_enable_check), terminal->scripting_enabled);
+    gtk_box_pack_start(GTK_BOX(toolbar_hbox), terminal->script_enable_check, FALSE, FALSE, 0);
+
+    // Add spacer
+    GtkWidget *spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_box_pack_start(GTK_BOX(toolbar_hbox), spacer, TRUE, TRUE, 0);
+
+    // Load script button
+    terminal->script_load_button = gtk_button_new_with_label("Load Script...");
+    gtk_box_pack_start(GTK_BOX(toolbar_hbox), terminal->script_load_button, FALSE, FALSE, 0);
+
+    // Save script button
+    terminal->script_save_button = gtk_button_new_with_label("Save Script...");
+    gtk_box_pack_start(GTK_BOX(toolbar_hbox), terminal->script_save_button, FALSE, FALSE, 0);
+
+    // Test script button
+    terminal->script_test_button = gtk_button_new_with_label("Test Script");
+    gtk_box_pack_start(GTK_BOX(toolbar_hbox), terminal->script_test_button, FALSE, FALSE, 0);
+
+    // Clear script button
+    terminal->script_clear_button = gtk_button_new_with_label("Clear");
+    gtk_box_pack_start(GTK_BOX(toolbar_hbox), terminal->script_clear_button, FALSE, FALSE, 0);
+
+    // Create script editor area
+    GtkWidget *editor_frame = gtk_frame_new("Lua Script Editor");
+    gtk_box_pack_start(GTK_BOX(main_vbox), editor_frame, TRUE, TRUE, 0);
+
+    GtkWidget *scrolled = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    gtk_container_add(GTK_CONTAINER(editor_frame), scrolled);
+
+    terminal->script_text_view = gtk_text_view_new();
+    gtk_text_view_set_monospace(GTK_TEXT_VIEW(terminal->script_text_view), TRUE);
+    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(terminal->script_text_view), GTK_WRAP_NONE);
+    gtk_container_add(GTK_CONTAINER(scrolled), terminal->script_text_view);
+
+    // Set initial script content if available
+    if (terminal->script_content) {
+        GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->script_text_view));
+        gtk_text_buffer_set_text(buffer, terminal->script_content, -1);
+    }
+
+    // Create info area
+    GtkWidget *info_frame = gtk_frame_new("Script Information");
+    gtk_box_pack_start(GTK_BOX(main_vbox), info_frame, FALSE, FALSE, 0);
+
+    GtkWidget *info_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_container_add(GTK_CONTAINER(info_frame), info_vbox);
+    gtk_container_set_border_width(GTK_CONTAINER(info_vbox), 10);
+
+    GtkWidget *info_label = gtk_label_new(
+        "Available Functions:\n"
+        "• on_data_received(data) - Called when data is received\n"
+        "• on_data_send(data) - Called before data is sent\n"
+        "• on_connection_open() - Called when connection opens\n"
+        "• on_connection_close() - Called when connection closes\n\n"
+        "Available API Functions:\n"
+        "• log(message) - Add message to terminal log\n"
+        "• send(data) - Send data through connection\n"
+        "• get_connection_info() - Get connection details\n"
+        "• get_statistics() - Get connection statistics\n"
+        "• parse_nmea(sentence) - Parse NMEA sentence\n"
+        "• create_nmea(talker, sentence, data) - Create NMEA sentence\n"
+        "• calculate_checksum(data) - Calculate NMEA checksum"
+    );
+    gtk_label_set_justify(GTK_LABEL(info_label), GTK_JUSTIFY_LEFT);
+    gtk_widget_set_halign(info_label, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(info_vbox), info_label, FALSE, FALSE, 0);
+
+    // Connect window destroy signal
+    g_signal_connect(terminal->script_window, "destroy", G_CALLBACK(on_script_window_destroy), terminal);
+
+    // Connect button signals
+    g_signal_connect(terminal->script_enable_check, "toggled", G_CALLBACK(on_script_enable_toggled), terminal);
+    g_signal_connect(terminal->script_load_button, "clicked", G_CALLBACK(on_script_load_clicked), terminal);
+    g_signal_connect(terminal->script_save_button, "clicked", G_CALLBACK(on_script_save_clicked), terminal);
+    g_signal_connect(terminal->script_test_button, "clicked", G_CALLBACK(on_script_test_clicked), terminal);
+    g_signal_connect(terminal->script_clear_button, "clicked", G_CALLBACK(on_script_clear_clicked), terminal);
+
+    // Show the window
+    gtk_widget_show_all(terminal->script_window);
 }

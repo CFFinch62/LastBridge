@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "ui.h"
 #include "settings.h"
+#include "scripting.h"
 
 // Forward declarations for macro chaining
 void send_single_command(SerialTerminal *terminal, const char *command, gboolean add_line_ending);
@@ -390,6 +391,9 @@ void on_window_destroy(GtkWidget *widget, gpointer data) {
         disconnect_serial(terminal);
     }
 
+    // Clean up scripting engine
+    scripting_cleanup(terminal);
+
     // Free allocated memory
     if (terminal->line_ending) free(terminal->line_ending);
     if (terminal->log_filename) free(terminal->log_filename);
@@ -495,7 +499,7 @@ void on_help_about_activate(GtkWidget *widget, gpointer data) {
     GtkWidget *about_dialog = gtk_about_dialog_new();
 
     gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(about_dialog), "LAST");
-    gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(about_dialog), "1.0");
+    gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(about_dialog), "1.1");
     gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about_dialog),
         "Linux Advanced Serial Transceiver\n\n"
         "A comprehensive serial communication terminal with advanced features including:\n"
@@ -503,6 +507,8 @@ void on_help_about_activate(GtkWidget *widget, gpointer data) {
         "• Hex display mode and timestamps\n"
         "• File operations and data logging\n"
         "• Control signals (DTR, RTS, Break)\n"
+        "• Lua scripting engine with dedicated window\n"
+        "• Programmable macros and network connectivity\n"
         "• Professional GUI interface\n"
         "• Integration with BRIDGE virtual null modem");
 
@@ -931,4 +937,211 @@ void on_macros_toggle_activate(GtkWidget *widget, gpointer data) {
     (void)widget; // Suppress unused parameter warning
     SerialTerminal *terminal = (SerialTerminal *)data;
     toggle_macro_panel_visibility(terminal);
+}
+
+// Scripting callbacks
+void on_tools_scripting_activate(GtkWidget *widget, gpointer data) {
+    (void)widget;
+    SerialTerminal *terminal = (SerialTerminal *)data;
+    create_scripting_window(terminal);
+}
+
+void on_script_window_destroy(GtkWidget *widget, gpointer data) {
+    (void)widget;
+    SerialTerminal *terminal = (SerialTerminal *)data;
+    terminal->script_window = NULL;
+}
+
+void on_script_enable_toggled(GtkWidget *widget, gpointer data) {
+    SerialTerminal *terminal = (SerialTerminal *)data;
+    terminal->scripting_enabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+
+    // Save settings
+    update_settings_from_ui(terminal);
+    save_settings(terminal);
+}
+
+void on_script_load_clicked(GtkWidget *widget, gpointer data) {
+    (void)widget;
+    SerialTerminal *terminal = (SerialTerminal *)data;
+
+    GtkWidget *dialog = gtk_file_chooser_dialog_new("Load Lua Script",
+                                                   GTK_WINDOW(terminal->script_window),
+                                                   GTK_FILE_CHOOSER_ACTION_OPEN,
+                                                   "_Cancel", GTK_RESPONSE_CANCEL,
+                                                   "_Open", GTK_RESPONSE_ACCEPT,
+                                                   NULL);
+
+    // Add file filter for Lua files
+    GtkFileFilter *filter = gtk_file_filter_new();
+    gtk_file_filter_set_name(filter, "Lua Scripts (*.lua)");
+    gtk_file_filter_add_pattern(filter, "*.lua");
+    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+
+    // Add filter for all files
+    filter = gtk_file_filter_new();
+    gtk_file_filter_set_name(filter, "All Files");
+    gtk_file_filter_add_pattern(filter, "*");
+    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+        char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+
+        // Load script content
+        gchar *script_content = NULL;
+        gsize length = 0;
+        GError *error = NULL;
+
+        if (g_file_get_contents(filename, &script_content, &length, &error)) {
+            // Set script content in text view
+            GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->script_text_view));
+            gtk_text_buffer_set_text(buffer, script_content, -1);
+
+            // Load script into engine
+            if (terminal->lua_state) {
+                scripting_load_script(terminal, script_content);
+            }
+
+            g_free(script_content);
+        } else {
+            GtkWidget *error_dialog = gtk_message_dialog_new(GTK_WINDOW(terminal->script_window),
+                                                            GTK_DIALOG_MODAL,
+                                                            GTK_MESSAGE_ERROR,
+                                                            GTK_BUTTONS_OK,
+                                                            "Failed to load script file:\n%s",
+                                                            error ? error->message : "Unknown error");
+            gtk_dialog_run(GTK_DIALOG(error_dialog));
+            gtk_widget_destroy(error_dialog);
+            if (error) g_error_free(error);
+        }
+
+        g_free(filename);
+    }
+
+    gtk_widget_destroy(dialog);
+}
+
+void on_script_save_clicked(GtkWidget *widget, gpointer data) {
+    (void)widget;
+    SerialTerminal *terminal = (SerialTerminal *)data;
+
+    GtkWidget *dialog = gtk_file_chooser_dialog_new("Save Lua Script",
+                                                   GTK_WINDOW(terminal->script_window),
+                                                   GTK_FILE_CHOOSER_ACTION_SAVE,
+                                                   "_Cancel", GTK_RESPONSE_CANCEL,
+                                                   "_Save", GTK_RESPONSE_ACCEPT,
+                                                   NULL);
+
+    gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
+
+    // Add file filter for Lua files
+    GtkFileFilter *filter = gtk_file_filter_new();
+    gtk_file_filter_set_name(filter, "Lua Scripts (*.lua)");
+    gtk_file_filter_add_pattern(filter, "*.lua");
+    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+
+    // Set default filename
+    gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(dialog), "script.lua");
+
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+        char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+
+        // Get script content from text view
+        GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->script_text_view));
+        GtkTextIter start, end;
+        gtk_text_buffer_get_bounds(buffer, &start, &end);
+        gchar *script_content = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+
+        // Save to file
+        GError *error = NULL;
+        if (!g_file_set_contents(filename, script_content, -1, &error)) {
+            GtkWidget *error_dialog = gtk_message_dialog_new(GTK_WINDOW(terminal->script_window),
+                                                            GTK_DIALOG_MODAL,
+                                                            GTK_MESSAGE_ERROR,
+                                                            GTK_BUTTONS_OK,
+                                                            "Failed to save script file:\n%s",
+                                                            error ? error->message : "Unknown error");
+            gtk_dialog_run(GTK_DIALOG(error_dialog));
+            gtk_widget_destroy(error_dialog);
+            if (error) g_error_free(error);
+        }
+
+        g_free(script_content);
+        g_free(filename);
+    }
+
+    gtk_widget_destroy(dialog);
+}
+
+void on_script_test_clicked(GtkWidget *widget, gpointer data) {
+    (void)widget;
+    SerialTerminal *terminal = (SerialTerminal *)data;
+
+    if (!terminal->lua_state) {
+        GtkWidget *error_dialog = gtk_message_dialog_new(GTK_WINDOW(terminal->script_window),
+                                                        GTK_DIALOG_MODAL,
+                                                        GTK_MESSAGE_ERROR,
+                                                        GTK_BUTTONS_OK,
+                                                        "Scripting engine not initialized");
+        gtk_dialog_run(GTK_DIALOG(error_dialog));
+        gtk_widget_destroy(error_dialog);
+        return;
+    }
+
+    // Get script content from text view
+    GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->script_text_view));
+    GtkTextIter start, end;
+    gtk_text_buffer_get_bounds(buffer, &start, &end);
+    gchar *script_content = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+
+    if (!script_content || strlen(script_content) == 0) {
+        GtkWidget *error_dialog = gtk_message_dialog_new(GTK_WINDOW(terminal->script_window),
+                                                        GTK_DIALOG_MODAL,
+                                                        GTK_MESSAGE_WARNING,
+                                                        GTK_BUTTONS_OK,
+                                                        "No script content to test");
+        gtk_dialog_run(GTK_DIALOG(error_dialog));
+        gtk_widget_destroy(error_dialog);
+        g_free(script_content);
+        return;
+    }
+
+    // Load and test the script
+    gboolean success = scripting_load_script(terminal, script_content);
+
+    if (success) {
+        GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(terminal->script_window),
+                                                          GTK_DIALOG_MODAL,
+                                                          GTK_MESSAGE_INFO,
+                                                          GTK_BUTTONS_OK,
+                                                          "Script loaded successfully!\n\n"
+                                                          "The script has been compiled and is ready to use.");
+        gtk_dialog_run(GTK_DIALOG(success_dialog));
+        gtk_widget_destroy(success_dialog);
+    } else {
+        GtkWidget *error_dialog = gtk_message_dialog_new(GTK_WINDOW(terminal->script_window),
+                                                        GTK_DIALOG_MODAL,
+                                                        GTK_MESSAGE_ERROR,
+                                                        GTK_BUTTONS_OK,
+                                                        "Script compilation failed!\n\n"
+                                                        "Please check the script syntax and try again.");
+        gtk_dialog_run(GTK_DIALOG(error_dialog));
+        gtk_widget_destroy(error_dialog);
+    }
+
+    g_free(script_content);
+}
+
+void on_script_clear_clicked(GtkWidget *widget, gpointer data) {
+    (void)widget;
+    SerialTerminal *terminal = (SerialTerminal *)data;
+
+    // Clear the text view
+    GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(terminal->script_text_view));
+    gtk_text_buffer_set_text(buffer, "", -1);
+
+    // Clear the script from the engine
+    if (terminal->lua_state) {
+        scripting_clear_script(terminal);
+    }
 }
