@@ -20,6 +20,10 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <glib.h>
 #include <pthread.h>
 #include <time.h>
@@ -33,6 +37,20 @@
 #define MAX_MACRO_BUTTONS 16
 #define MAX_MACRO_LABEL_LENGTH 32
 #define MAX_MACRO_COMMAND_LENGTH 256
+
+// Network connection constants
+#define MAX_HOSTNAME_LENGTH 256
+#define MAX_PORT_LENGTH 8
+#define DEFAULT_NETWORK_PORT 10110  // Common NMEA 0183 over TCP port
+
+// Connection types
+typedef enum {
+    CONNECTION_TYPE_SERIAL = 0,
+    CONNECTION_TYPE_TCP_CLIENT,
+    CONNECTION_TYPE_TCP_SERVER,
+    CONNECTION_TYPE_UDP_CLIENT,
+    CONNECTION_TYPE_UDP_SERVER
+} ConnectionType;
 
 // Main application data structure
 typedef struct {
@@ -50,6 +68,7 @@ typedef struct {
     GtkWidget *help_menu;
 
     // Connection settings
+    GtkWidget *connection_type_combo;
     GtkWidget *port_combo;
     GtkWidget *baudrate_combo;
     GtkWidget *databits_combo;
@@ -59,6 +78,12 @@ typedef struct {
     GtkWidget *connect_button;
     GtkWidget *disconnect_button;
     GtkWidget *refresh_button;
+
+    // Network connection settings
+    GtkWidget *network_host_entry;
+    GtkWidget *network_port_entry;
+    GtkWidget *network_settings_frame;
+    GtkWidget *serial_settings_frame;
 
     // Data handling
     GtkWidget *receive_text;
@@ -112,11 +137,20 @@ typedef struct {
     GtkWidget *text_color_button;
     GtkWidget *theme_combo;
 
-    // Serial connection
-    int serial_fd;
+    // Connection management
+    ConnectionType connection_type;
+    int connection_fd;  // Unified file descriptor for serial or network
     gboolean connected;
     pthread_t read_thread;
     gboolean thread_running;
+
+    // Network connection details
+    char network_host[MAX_HOSTNAME_LENGTH];
+    char network_port[MAX_PORT_LENGTH];
+    int server_fd;  // For server modes (TCP/UDP server)
+    struct sockaddr_in server_addr;
+    struct sockaddr_in client_addr;
+    socklen_t client_addr_len;
 
     // Statistics
     unsigned long bytes_sent;
@@ -139,12 +173,15 @@ typedef struct {
     char *theme_preference; // "dark", "light", or "system"
 
     // Connection settings (for persistence)
+    char *saved_connection_type;
     char *saved_port;
     char *saved_baudrate;
     char *saved_databits;
     char *saved_parity;
     char *saved_stopbits;
     char *saved_flowcontrol;
+    char *saved_network_host;
+    char *saved_network_port;
 
     // File logging
     FILE *log_file;

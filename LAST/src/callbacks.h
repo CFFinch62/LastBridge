@@ -9,6 +9,7 @@
  */
 
 // Connection callbacks
+void on_connection_type_changed(GtkWidget *widget, gpointer data);
 void on_connect_clicked(GtkWidget *widget, gpointer data);
 void on_disconnect_clicked(GtkWidget *widget, gpointer data);
 void on_refresh_clicked(GtkWidget *widget, gpointer data);

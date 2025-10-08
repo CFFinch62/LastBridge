@@ -81,7 +81,10 @@ void load_settings(SerialTerminal *terminal) {
                 terminal->line_ending = strdup(value);
             }
             // Connection settings
-            else if (strcmp(key, "port") == 0) {
+            else if (strcmp(key, "connection_type") == 0) {
+                if (terminal->saved_connection_type) free(terminal->saved_connection_type);
+                terminal->saved_connection_type = strdup(value);
+            } else if (strcmp(key, "port") == 0) {
                 if (terminal->saved_port) free(terminal->saved_port);
                 terminal->saved_port = strdup(value);
             } else if (strcmp(key, "baudrate") == 0) {
@@ -99,6 +102,12 @@ void load_settings(SerialTerminal *terminal) {
             } else if (strcmp(key, "flowcontrol") == 0) {
                 if (terminal->saved_flowcontrol) free(terminal->saved_flowcontrol);
                 terminal->saved_flowcontrol = strdup(value);
+            } else if (strcmp(key, "network_host") == 0) {
+                if (terminal->saved_network_host) free(terminal->saved_network_host);
+                terminal->saved_network_host = strdup(value);
+            } else if (strcmp(key, "network_port") == 0) {
+                if (terminal->saved_network_port) free(terminal->saved_network_port);
+                terminal->saved_network_port = strdup(value);
             }
             // File operations settings
             else if (strcmp(key, "line_by_line_mode") == 0) {
@@ -169,6 +178,18 @@ void save_settings(SerialTerminal *terminal) {
 
     // Connection settings (save current UI state)
     fprintf(file, "[Connection]\n");
+    if (terminal->connection_type_combo) {
+        const char *connection_type = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo));
+        if (connection_type) fprintf(file, "connection_type=%s\n", connection_type);
+    }
+    if (terminal->network_host_entry) {
+        const char *host = gtk_entry_get_text(GTK_ENTRY(terminal->network_host_entry));
+        if (host) fprintf(file, "network_host=%s\n", host);
+    }
+    if (terminal->network_port_entry) {
+        const char *port = gtk_entry_get_text(GTK_ENTRY(terminal->network_port_entry));
+        if (port) fprintf(file, "network_port=%s\n", port);
+    }
     if (terminal->port_combo) {
         const char *port = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(terminal->port_combo));
         if (port) fprintf(file, "port=%s\n", port);
@@ -312,6 +333,26 @@ void apply_loaded_settings(SerialTerminal *terminal) {
         }
     }
 
+    // Apply connection type setting
+    if (terminal->saved_connection_type && terminal->connection_type_combo) {
+        int count = gtk_tree_model_iter_n_children(gtk_combo_box_get_model(GTK_COMBO_BOX(terminal->connection_type_combo)), NULL);
+        for (int i = 0; i < count; i++) {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->connection_type_combo), i);
+            const char *text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo));
+            if (text && strcmp(text, terminal->saved_connection_type) == 0) {
+                break;
+            }
+        }
+    }
+
+    // Apply network settings
+    if (terminal->saved_network_host && terminal->network_host_entry) {
+        gtk_entry_set_text(GTK_ENTRY(terminal->network_host_entry), terminal->saved_network_host);
+    }
+    if (terminal->saved_network_port && terminal->network_port_entry) {
+        gtk_entry_set_text(GTK_ENTRY(terminal->network_port_entry), terminal->saved_network_port);
+    }
+
     // Apply connection settings
     if (terminal->saved_baudrate && terminal->baudrate_combo) {
         // Find and set the saved baudrate
@@ -445,6 +486,31 @@ void update_settings_from_ui(SerialTerminal *terminal) {
             case 2: terminal->line_ending = strdup("\n"); break;   // LF
             case 3: terminal->line_ending = strdup("\r\n"); break; // CR+LF
             default: terminal->line_ending = strdup("\r\n"); break;
+        }
+    }
+
+    // Update connection type from UI
+    if (terminal->connection_type_combo) {
+        const char *connection_type = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo));
+        if (connection_type) {
+            if (terminal->saved_connection_type) free(terminal->saved_connection_type);
+            terminal->saved_connection_type = strdup(connection_type);
+        }
+    }
+
+    // Update network settings from UI
+    if (terminal->network_host_entry) {
+        const char *host = gtk_entry_get_text(GTK_ENTRY(terminal->network_host_entry));
+        if (host) {
+            if (terminal->saved_network_host) free(terminal->saved_network_host);
+            terminal->saved_network_host = strdup(host);
+        }
+    }
+    if (terminal->network_port_entry) {
+        const char *port = gtk_entry_get_text(GTK_ENTRY(terminal->network_port_entry));
+        if (port) {
+            if (terminal->saved_network_port) free(terminal->saved_network_port);
+            terminal->saved_network_port = strdup(port);
         }
     }
 

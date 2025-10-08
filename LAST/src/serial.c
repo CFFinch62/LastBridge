@@ -139,8 +139,8 @@ void connect_serial(SerialTerminal *terminal) {
     }
 
     // Open serial port
-    terminal->serial_fd = open(port, O_RDWR | O_NOCTTY);
-    if (terminal->serial_fd < 0) {
+    terminal->connection_fd = open(port, O_RDWR | O_NOCTTY);
+    if (terminal->connection_fd < 0) {
         char error_msg[256];
         snprintf(error_msg, sizeof(error_msg), "Failed to open %s: %s", port, strerror(errno));
         gtk_label_set_text(GTK_LABEL(terminal->status_label), error_msg);
@@ -216,8 +216,8 @@ void disconnect_serial(SerialTerminal *terminal) {
     }
 
     // Close serial port
-    close(terminal->serial_fd);
-    terminal->serial_fd = -1;
+    close(terminal->connection_fd);
+    terminal->connection_fd = -1;
 
     // Update UI
     gtk_widget_set_sensitive(terminal->connect_button, TRUE);
@@ -245,13 +245,13 @@ void *read_thread_func(void *arg) {
         struct timeval timeout;
 
         FD_ZERO(&readfds);
-        FD_SET(terminal->serial_fd, &readfds);
+        FD_SET(terminal->connection_fd, &readfds);
         timeout.tv_sec = 0;
         timeout.tv_usec = 100000;  // 100ms timeout
 
-        int result = select(terminal->serial_fd + 1, &readfds, NULL, NULL, &timeout);
-        if (result > 0 && FD_ISSET(terminal->serial_fd, &readfds)) {
-            ssize_t bytes_read = read(terminal->serial_fd, buffer, sizeof(buffer) - 1);
+        int result = select(terminal->connection_fd + 1, &readfds, NULL, NULL, &timeout);
+        if (result > 0 && FD_ISSET(terminal->connection_fd, &readfds)) {
+            ssize_t bytes_read = read(terminal->connection_fd, buffer, sizeof(buffer) - 1);
             if (bytes_read > 0) {
                 // Update statistics
                 terminal->bytes_received += bytes_read;
@@ -400,7 +400,7 @@ void show_status_message(SerialTerminal *terminal, const char *message) {
 
 void apply_serial_settings(SerialTerminal *terminal) {
     struct termios tio;
-    tcgetattr(terminal->serial_fd, &tio);
+    tcgetattr(terminal->connection_fd, &tio);
 
     // Get settings from UI
     const char *baudrate_str = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(terminal->baudrate_combo));
@@ -475,7 +475,7 @@ void apply_serial_settings(SerialTerminal *terminal) {
     tio.c_cc[VMIN] = 0;   // Non-blocking read
     tio.c_cc[VTIME] = 1;  // 0.1 second timeout
 
-    tcsetattr(terminal->serial_fd, TCSANOW, &tio);
+    tcsetattr(terminal->connection_fd, TCSANOW, &tio);
 }
 
 void send_data(SerialTerminal *terminal) {
@@ -485,7 +485,7 @@ void send_data(SerialTerminal *terminal) {
     if (strlen(text) == 0) return;
 
     // Send data with line ending
-    ssize_t bytes_written = write(terminal->serial_fd, text, strlen(text));
+    ssize_t bytes_written = write(terminal->connection_fd, text, strlen(text));
     if (bytes_written > 0) {
         terminal->bytes_sent += bytes_written;
         // Mark TX activity
@@ -495,7 +495,7 @@ void send_data(SerialTerminal *terminal) {
 
     // Add line ending if configured
     if (terminal->line_ending && strlen(terminal->line_ending) > 0) {
-        bytes_written = write(terminal->serial_fd, terminal->line_ending, strlen(terminal->line_ending));
+        bytes_written = write(terminal->connection_fd, terminal->line_ending, strlen(terminal->line_ending));
         if (bytes_written > 0) {
             terminal->bytes_sent += bytes_written;
             // Mark TX activity for line ending too
@@ -527,7 +527,7 @@ void set_control_signals(SerialTerminal *terminal) {
     if (!terminal->connected) return;
 
     int status;
-    if (ioctl(terminal->serial_fd, TIOCMGET, &status) == -1) {
+    if (ioctl(terminal->connection_fd, TIOCMGET, &status) == -1) {
         return;
     }
 
@@ -545,13 +545,13 @@ void set_control_signals(SerialTerminal *terminal) {
         status &= ~TIOCM_RTS;
     }
 
-    ioctl(terminal->serial_fd, TIOCMSET, &status);
+    ioctl(terminal->connection_fd, TIOCMSET, &status);
 }
 
 void send_break_signal(SerialTerminal *terminal) {
     if (!terminal->connected) return;
 
-    tcsendbreak(terminal->serial_fd, 0);
+    tcsendbreak(terminal->connection_fd, 0);
     show_status_message(terminal, "Break signal sent");
 }
 
@@ -587,7 +587,7 @@ gboolean update_signal_indicators(gpointer data) {
 
     // Read current signal line status
     int status;
-    if (ioctl(terminal->serial_fd, TIOCMGET, &status) == 0) {
+    if (ioctl(terminal->connection_fd, TIOCMGET, &status) == 0) {
         // Update control signal indicators
         update_indicator_color(terminal->cts_indicator, (status & TIOCM_CTS) ? "#00CC00" : "#CC0000");
         update_indicator_color(terminal->rts_indicator, (status & TIOCM_RTS) ? "#00CC00" : "#CC0000");

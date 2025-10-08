@@ -17,6 +17,16 @@ A full-featured serial terminal application built from the working low-level ser
 - ✅ **Stop bits**: 1, 2
 - ✅ **Flow control**: None, Hardware (RTS/CTS), Software (XON/XOFF)
 
+### **Network Connectivity** 🆕
+- ✅ **TCP Client** - connect to remote TCP servers (NMEA over TCP)
+- ✅ **TCP Server** - accept incoming TCP connections from marine devices
+- ✅ **UDP Client** - send data to specific network hosts
+- ✅ **UDP Server** - receive broadcast data from multiple devices
+- ✅ **Hostname resolution** - support for both IP addresses and hostnames
+- ✅ **NMEA 0183 ready** - default port 10110 for marine electronics
+- ✅ **Real-time data** - non-blocking network I/O for continuous streams
+- ✅ **Unified interface** - same display and logging features as serial connections
+
 ### **Advanced Display Features**
 - ✅ **Dual display mode** - simultaneous text and hex data display 🆕
 - ✅ **Hex display mode** - view data in hexadecimal format with configurable bytes per line
@@ -229,6 +239,9 @@ Full Setup: "{Start AP}!TR,51!VD,480" (Complete initialization sequence)
 | **Programmable macros** | ❌ | ❌ | ✅ 🆕 |
 | **Macro chaining** | ❌ | ❌ | ✅ 🆕 |
 | **Macro panel toggle** | ❌ | ❌ | ✅ 🆕 |
+| **TCP/UDP connectivity** | ❌ | ❌ | ✅ 🆕 |
+| **Network client/server** | ❌ | ❌ | ✅ 🆕 |
+| **NMEA over Ethernet** | ❌ | ❌ | ✅ 🆕 |
 | Data logging | ❌ | ✅ | ✅ |
 | Control signals | ✅ | ✅ | ✅ |
 | Statistics | ❌ | ❌ | ✅ |

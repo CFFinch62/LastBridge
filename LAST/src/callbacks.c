@@ -5,6 +5,7 @@
 
 #include "callbacks.h"
 #include "serial.h"
+#include "network.h"
 #include "file_ops.h"
 #include "utils.h"
 #include "ui.h"
@@ -15,14 +16,132 @@ void send_single_command(SerialTerminal *terminal, const char *command, gboolean
 void send_macro_command_parts(SerialTerminal *terminal, const char *command, int macro_index);
 
 // Connection callbacks
+void on_connection_type_changed(GtkWidget *widget, gpointer data) {
+    SerialTerminal *terminal = (SerialTerminal *)data;
+    const char *selection = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget));
+
+    if (!selection) return;
+
+    // Update connection type
+    terminal->connection_type = string_to_connection_type(selection);
+
+    // Show/hide appropriate settings frames
+    if (terminal->connection_type == CONNECTION_TYPE_SERIAL) {
+        gtk_widget_show_all(terminal->serial_settings_frame);
+        gtk_widget_hide(terminal->network_settings_frame);
+    } else {
+        gtk_widget_hide(terminal->serial_settings_frame);
+        gtk_widget_set_no_show_all(terminal->network_settings_frame, FALSE);
+        gtk_widget_show_all(terminal->network_settings_frame);
+    }
+
+    // Update settings for persistence
+    update_settings_from_ui(terminal);
+    save_settings(terminal);
+}
+
 void on_connect_clicked(GtkWidget *widget, gpointer data) {
     (void)widget;
-    connect_serial((SerialTerminal *)data);
+    SerialTerminal *terminal = (SerialTerminal *)data;
+
+    if (terminal->connection_type == CONNECTION_TYPE_SERIAL) {
+        connect_serial(terminal);
+    } else {
+        // Network connection logic will be added here
+        const char *host = gtk_entry_get_text(GTK_ENTRY(terminal->network_host_entry));
+        const char *port_str = gtk_entry_get_text(GTK_ENTRY(terminal->network_port_entry));
+
+        if (!is_valid_hostname(host)) {
+            show_network_status(terminal, "Invalid hostname or IP address");
+            return;
+        }
+
+        if (!is_valid_port(port_str)) {
+            show_network_status(terminal, "Invalid port number (1-65535)");
+            return;
+        }
+
+        int port = atoi(port_str);
+        gboolean success = FALSE;
+
+        // Store network settings
+        strncpy(terminal->network_host, host, MAX_HOSTNAME_LENGTH - 1);
+        terminal->network_host[MAX_HOSTNAME_LENGTH - 1] = '\0';
+        strncpy(terminal->network_port, port_str, MAX_PORT_LENGTH - 1);
+        terminal->network_port[MAX_PORT_LENGTH - 1] = '\0';
+
+        // Initialize connection fields
+        terminal->connection_fd = -1;
+        terminal->server_fd = -1;
+
+        switch (terminal->connection_type) {
+            case CONNECTION_TYPE_TCP_CLIENT:
+                success = connect_tcp_client(terminal, host, port);
+                break;
+            case CONNECTION_TYPE_TCP_SERVER:
+                success = connect_tcp_server(terminal, port);
+                break;
+            case CONNECTION_TYPE_UDP_CLIENT:
+                success = connect_udp_client(terminal, host, port);
+                break;
+            case CONNECTION_TYPE_UDP_SERVER:
+                success = connect_udp_server(terminal, port);
+                break;
+            default:
+                success = FALSE;
+                break;
+        }
+
+        if (success) {
+            // Initialize statistics
+            terminal->bytes_sent = 0;
+            terminal->bytes_received = 0;
+            terminal->connection_start_time = time(NULL);
+
+            // Start read thread
+            terminal->connected = TRUE;
+            terminal->thread_running = TRUE;
+            pthread_create(&terminal->read_thread, NULL, network_read_thread_func, terminal);
+
+            // Update UI
+            gtk_widget_set_sensitive(terminal->connect_button, FALSE);
+            gtk_widget_set_sensitive(terminal->disconnect_button, TRUE);
+
+            // Show connection info
+            char *info = get_network_connection_info(terminal);
+            if (info) {
+                show_network_status(terminal, info);
+                free(info);
+            }
+        }
+    }
 }
 
 void on_disconnect_clicked(GtkWidget *widget, gpointer data) {
     (void)widget;
-    disconnect_serial((SerialTerminal *)data);
+    SerialTerminal *terminal = (SerialTerminal *)data;
+
+    if (terminal->connection_type == CONNECTION_TYPE_SERIAL) {
+        disconnect_serial(terminal);
+    } else {
+        // Network disconnect
+        if (terminal->connected) {
+            terminal->thread_running = FALSE;
+
+            if (terminal->read_thread) {
+                pthread_join(terminal->read_thread, NULL);
+            }
+
+            disconnect_network(terminal);
+            terminal->connected = FALSE;
+
+            // Update UI
+            gtk_widget_set_sensitive(terminal->connect_button, TRUE);
+            gtk_widget_set_sensitive(terminal->disconnect_button, FALSE);
+
+            show_network_status(terminal, "Disconnected");
+        }
+    }
 }
 
 void on_refresh_clicked(GtkWidget *widget, gpointer data) {
@@ -657,6 +776,7 @@ void on_view_display_options_activate(GtkWidget *widget, gpointer data) {
 // Function to connect all signals
 void connect_signals(SerialTerminal *terminal) {
     // Connection signals
+    g_signal_connect(terminal->connection_type_combo, "changed", G_CALLBACK(on_connection_type_changed), terminal);
     g_signal_connect(terminal->connect_button, "clicked", G_CALLBACK(on_connect_clicked), terminal);
     g_signal_connect(terminal->disconnect_button, "clicked", G_CALLBACK(on_disconnect_clicked), terminal);
     g_signal_connect(terminal->refresh_button, "clicked", G_CALLBACK(on_refresh_clicked), terminal);
@@ -709,8 +829,15 @@ void connect_signals(SerialTerminal *terminal) {
 void send_single_command(SerialTerminal *terminal, const char *command, gboolean add_line_ending) {
     if (!terminal || !command || !terminal->connected || strlen(command) == 0) return;
 
-    // Send the command
-    ssize_t bytes_written = write(terminal->serial_fd, command, strlen(command));
+    // Send the command based on connection type
+    ssize_t bytes_written = 0;
+
+    if (terminal->connection_type == CONNECTION_TYPE_SERIAL) {
+        bytes_written = write(terminal->connection_fd, command, strlen(command));
+    } else {
+        bytes_written = network_send_data(terminal, command, strlen(command));
+    }
+
     if (bytes_written > 0) {
         terminal->bytes_sent += bytes_written;
         // Mark TX activity
@@ -720,7 +847,12 @@ void send_single_command(SerialTerminal *terminal, const char *command, gboolean
 
     // Add line ending if requested and configured
     if (add_line_ending && terminal->line_ending && strlen(terminal->line_ending) > 0) {
-        bytes_written = write(terminal->serial_fd, terminal->line_ending, strlen(terminal->line_ending));
+        if (terminal->connection_type == CONNECTION_TYPE_SERIAL) {
+            bytes_written = write(terminal->connection_fd, terminal->line_ending, strlen(terminal->line_ending));
+        } else {
+            bytes_written = network_send_data(terminal, terminal->line_ending, strlen(terminal->line_ending));
+        }
+
         if (bytes_written > 0) {
             terminal->bytes_sent += bytes_written;
             // Mark TX activity for line ending too

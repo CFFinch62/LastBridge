@@ -131,7 +131,7 @@ void send_file_once(SerialTerminal *terminal, const char *filename) {
 
         while (fgets(buffer, sizeof(buffer), file)) {
             size_t len = strlen(buffer);
-            ssize_t bytes_written = write(terminal->serial_fd, buffer, len);
+            ssize_t bytes_written = write(terminal->connection_fd, buffer, len);
             if (bytes_written > 0) {
                 terminal->bytes_sent += bytes_written;
                 total_sent += bytes_written;
@@ -363,7 +363,7 @@ gboolean line_by_line_timer_callback(gpointer data) {
         // Send the line content
         ssize_t bytes_written = 0;
         if (len > 0) {
-            bytes_written = write(terminal->serial_fd, line, len);
+            bytes_written = write(terminal->connection_fd, line, len);
             if (bytes_written > 0) {
                 terminal->bytes_sent += bytes_written;
                 // Mark TX activity
@@ -374,7 +374,7 @@ gboolean line_by_line_timer_callback(gpointer data) {
 
         // Always add CR-LF line ending
         const char *line_ending = "\r\n";
-        ssize_t ending_bytes = write(terminal->serial_fd, line_ending, strlen(line_ending));
+        ssize_t ending_bytes = write(terminal->connection_fd, line_ending, strlen(line_ending));
         if (ending_bytes > 0) {
             terminal->bytes_sent += ending_bytes;
             // Mark TX activity for line ending too

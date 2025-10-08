@@ -143,17 +143,48 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
 
     int row = 0;
 
-    // Port selection
-    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Port:"), 0, row, 1, 1);
-    terminal->port_combo = gtk_combo_box_text_new();
-    gtk_grid_attach(GTK_GRID(grid), terminal->port_combo, 1, row, 1, 1);
-
-    terminal->refresh_button = gtk_button_new_with_label("Refresh");
-    gtk_grid_attach(GTK_GRID(grid), terminal->refresh_button, 2, row, 1, 1);
+    // Connection type selection
+    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Connection:"), 0, row, 1, 1);
+    terminal->connection_type_combo = gtk_combo_box_text_new();
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo), "Serial");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo), "TCP Client");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo), "TCP Server");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo), "UDP Client");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo), "UDP Server");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->connection_type_combo), 0); // Serial
+    gtk_grid_attach(GTK_GRID(grid), terminal->connection_type_combo, 1, row, 2, 1);
     row++;
 
+    // Create frames for serial and network settings
+    terminal->serial_settings_frame = gtk_frame_new("Serial Settings");
+    gtk_grid_attach(GTK_GRID(grid), terminal->serial_settings_frame, 0, row, 3, 1);
+    row++;
+
+    terminal->network_settings_frame = gtk_frame_new("Network Settings");
+    gtk_grid_attach(GTK_GRID(grid), terminal->network_settings_frame, 0, row, 3, 1);
+    gtk_widget_set_no_show_all(terminal->network_settings_frame, TRUE); // Hidden by default
+    row++;
+
+    // Create serial settings grid
+    GtkWidget *serial_grid = gtk_grid_new();
+    gtk_container_add(GTK_CONTAINER(terminal->serial_settings_frame), serial_grid);
+    gtk_container_set_border_width(GTK_CONTAINER(serial_grid), 10);
+    gtk_grid_set_row_spacing(GTK_GRID(serial_grid), 5);
+    gtk_grid_set_column_spacing(GTK_GRID(serial_grid), 10);
+
+    int serial_row = 0;
+
+    // Port selection
+    gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Port:"), 0, serial_row, 1, 1);
+    terminal->port_combo = gtk_combo_box_text_new();
+    gtk_grid_attach(GTK_GRID(serial_grid), terminal->port_combo, 1, serial_row, 1, 1);
+
+    terminal->refresh_button = gtk_button_new_with_label("Refresh");
+    gtk_grid_attach(GTK_GRID(serial_grid), terminal->refresh_button, 2, serial_row, 1, 1);
+    serial_row++;
+
     // Baud rate
-    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Baud Rate:"), 0, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Baud Rate:"), 0, serial_row, 1, 1);
     terminal->baudrate_combo = gtk_combo_box_text_new();
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->baudrate_combo), "300");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->baudrate_combo), "1200");
@@ -168,50 +199,75 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->baudrate_combo), "460800");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->baudrate_combo), "921600");
     gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->baudrate_combo), 4); // 9600
-    gtk_grid_attach(GTK_GRID(grid), terminal->baudrate_combo, 1, row, 2, 1);
-    row++;
+    gtk_grid_attach(GTK_GRID(serial_grid), terminal->baudrate_combo, 1, serial_row, 2, 1);
+    serial_row++;
 
     // Data bits
-    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Data Bits:"), 0, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Data Bits:"), 0, serial_row, 1, 1);
     terminal->databits_combo = gtk_combo_box_text_new();
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->databits_combo), "5");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->databits_combo), "6");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->databits_combo), "7");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->databits_combo), "8");
     gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->databits_combo), 3); // 8
-    gtk_grid_attach(GTK_GRID(grid), terminal->databits_combo, 1, row, 2, 1);
-    row++;
+    gtk_grid_attach(GTK_GRID(serial_grid), terminal->databits_combo, 1, serial_row, 2, 1);
+    serial_row++;
 
     // Parity
-    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Parity:"), 0, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Parity:"), 0, serial_row, 1, 1);
     terminal->parity_combo = gtk_combo_box_text_new();
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->parity_combo), "None");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->parity_combo), "Even");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->parity_combo), "Odd");
     gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->parity_combo), 0); // None
-    gtk_grid_attach(GTK_GRID(grid), terminal->parity_combo, 1, row, 2, 1);
-    row++;
+    gtk_grid_attach(GTK_GRID(serial_grid), terminal->parity_combo, 1, serial_row, 2, 1);
+    serial_row++;
 
     // Stop bits
-    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Stop Bits:"), 0, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Stop Bits:"), 0, serial_row, 1, 1);
     terminal->stopbits_combo = gtk_combo_box_text_new();
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->stopbits_combo), "1");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->stopbits_combo), "2");
     gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->stopbits_combo), 0); // 1
-    gtk_grid_attach(GTK_GRID(grid), terminal->stopbits_combo, 1, row, 2, 1);
-    row++;
+    gtk_grid_attach(GTK_GRID(serial_grid), terminal->stopbits_combo, 1, serial_row, 2, 1);
+    serial_row++;
 
     // Flow control
-    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Flow Control:"), 0, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Flow Control:"), 0, serial_row, 1, 1);
     terminal->flowcontrol_combo = gtk_combo_box_text_new();
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->flowcontrol_combo), "None");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->flowcontrol_combo), "Hardware");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->flowcontrol_combo), "Software");
     gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->flowcontrol_combo), 0); // None
-    gtk_grid_attach(GTK_GRID(grid), terminal->flowcontrol_combo, 1, row, 2, 1);
-    row++;
+    gtk_grid_attach(GTK_GRID(serial_grid), terminal->flowcontrol_combo, 1, serial_row, 2, 1);
+    serial_row++;
 
-    // Connection buttons
+    // Create network settings grid
+    GtkWidget *network_grid = gtk_grid_new();
+    gtk_container_add(GTK_CONTAINER(terminal->network_settings_frame), network_grid);
+    gtk_container_set_border_width(GTK_CONTAINER(network_grid), 10);
+    gtk_grid_set_row_spacing(GTK_GRID(network_grid), 5);
+    gtk_grid_set_column_spacing(GTK_GRID(network_grid), 10);
+
+    int network_row = 0;
+
+    // Host/IP address
+    gtk_grid_attach(GTK_GRID(network_grid), gtk_label_new("Host/IP:"), 0, network_row, 1, 1);
+    terminal->network_host_entry = gtk_entry_new();
+    gtk_entry_set_text(GTK_ENTRY(terminal->network_host_entry), "localhost");
+    gtk_entry_set_placeholder_text(GTK_ENTRY(terminal->network_host_entry), "hostname or IP address");
+    gtk_grid_attach(GTK_GRID(network_grid), terminal->network_host_entry, 1, network_row, 2, 1);
+    network_row++;
+
+    // Port
+    gtk_grid_attach(GTK_GRID(network_grid), gtk_label_new("Port:"), 0, network_row, 1, 1);
+    terminal->network_port_entry = gtk_entry_new();
+    gtk_entry_set_text(GTK_ENTRY(terminal->network_port_entry), "10110");
+    gtk_entry_set_placeholder_text(GTK_ENTRY(terminal->network_port_entry), "1-65535");
+    gtk_grid_attach(GTK_GRID(network_grid), terminal->network_port_entry, 1, network_row, 2, 1);
+    network_row++;
+
+    // Connection buttons (shared between serial and network)
     terminal->connect_button = gtk_button_new_with_label("Connect");
     gtk_grid_attach(GTK_GRID(grid), terminal->connect_button, 0, row, 1, 1);
 

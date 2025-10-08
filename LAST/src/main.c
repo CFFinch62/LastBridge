@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "serial.h"
+#include "network.h"
 #include "ui.h"
 #include "file_ops.h"
 #include "utils.h"
@@ -38,12 +39,24 @@ int main(int argc, char *argv[]) {
     terminal.theme_preference = strdup("system");
 
     // Initialize connection settings
+    terminal.connection_type = CONNECTION_TYPE_SERIAL;
+    terminal.connection_fd = -1;
+    terminal.server_fd = -1;
+    terminal.client_addr_len = 0;
+    strncpy(terminal.network_host, "localhost", MAX_HOSTNAME_LENGTH - 1);
+    terminal.network_host[MAX_HOSTNAME_LENGTH - 1] = '\0';
+    strncpy(terminal.network_port, "10110", MAX_PORT_LENGTH - 1);
+    terminal.network_port[MAX_PORT_LENGTH - 1] = '\0';
+
+    terminal.saved_connection_type = strdup("Serial");
     terminal.saved_port = NULL;
     terminal.saved_baudrate = strdup("9600");
     terminal.saved_databits = strdup("8");
     terminal.saved_parity = strdup("None");
     terminal.saved_stopbits = strdup("1");
     terminal.saved_flowcontrol = strdup("None");
+    terminal.saved_network_host = strdup("localhost");
+    terminal.saved_network_port = strdup("10110");
 
     // Initialize repeat file sending
     terminal.repeat_file_sending = FALSE;
@@ -75,10 +88,9 @@ int main(int argc, char *argv[]) {
         terminal.macro_commands[i][0] = '\0'; // Empty command initially
     }
 
-    // Initialize serial connection
+    // Initialize connection state
     terminal.connected = FALSE;
     terminal.thread_running = FALSE;
-    terminal.serial_fd = -1;
     terminal.bytes_sent = 0;
     terminal.bytes_received = 0;
 
