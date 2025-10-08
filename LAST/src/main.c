@@ -127,10 +127,14 @@ int main(int argc, char *argv[]) {
     // Show window
     gtk_widget_show_all(terminal.window);
 
-    // Debug: Check window size after showing
-    int width, height;
-    gtk_window_get_size(GTK_WINDOW(terminal.window), &width, &height);
-    printf("DEBUG: Window size after gtk_widget_show_all: %dx%d\n", width, height);
+    // Force window to exact size after all widgets are shown
+    // This overrides GTK's natural sizing which may grow the window based on content
+    gtk_window_resize(GTK_WINDOW(terminal.window), 1200, 720);
+
+    // Process pending events to ensure resize is applied
+    while (gtk_events_pending()) {
+        gtk_main_iteration();
+    }
 
     // Run main loop
     gtk_main();

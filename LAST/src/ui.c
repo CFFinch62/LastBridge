@@ -12,23 +12,22 @@ void create_main_interface(SerialTerminal *terminal) {
     terminal->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(terminal->window), "LAST - Linux Advanced Serial Terminal");
 
-    // Set reasonable default size that fits 1366x768 screens (with taskbar ~40px)
-    // Default to 1200x600 which leaves room for window decorations and taskbar
-    printf("DEBUG: Setting window default size to 1200x600\n");
-    gtk_window_set_default_size(GTK_WINDOW(terminal->window), 1200, 600);
+    // Set default size to fit 1366x768 screens with room for decorations and taskbar
+    gtk_window_set_default_size(GTK_WINDOW(terminal->window), 1200, 720);
 
-    // Make window fully resizable - no minimum size constraints
+    // Make window fully resizable with maximize button enabled
     gtk_window_set_resizable(GTK_WINDOW(terminal->window), TRUE);
 
     // Set normal window type hint for proper window manager treatment
     gtk_window_set_type_hint(GTK_WINDOW(terminal->window), GDK_WINDOW_TYPE_HINT_NORMAL);
 
-    // CRITICAL: Set geometry hints to PREVENT window from growing beyond default size
+    // Set minimum size to ensure UI remains usable when resized
+    // This allows maximize button while preventing window from being too small
     GdkGeometry geometry;
-    geometry.max_width = -1;  // No maximum width
-    geometry.max_height = 700; // Maximum height to fit 768px screen
+    geometry.min_width = 800;   // Minimum width for usable UI
+    geometry.min_height = 500;  // Minimum height for usable UI
     gtk_window_set_geometry_hints(GTK_WINDOW(terminal->window), NULL, &geometry,
-                                  GDK_HINT_MAX_SIZE);
+                                  GDK_HINT_MIN_SIZE);
 
     // Center the window on screen
     gtk_window_set_position(GTK_WINDOW(terminal->window), GTK_WIN_POS_CENTER);
@@ -72,36 +71,34 @@ void create_main_interface(SerialTerminal *terminal) {
     // Create menu bar
     create_menu_bar(terminal, main_vbox);
 
-    // Create main horizontal layout with two columns - reduce spacing to save height
-    GtkWidget *main_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3); // Reduced from 5 to 3
-    gtk_box_pack_start(GTK_BOX(main_vbox), main_hbox, TRUE, TRUE, 2); // Reduced from 5 to 2
+    // Create main horizontal layout
+    terminal->main_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
+    gtk_box_pack_start(GTK_BOX(main_vbox), terminal->main_hbox, TRUE, TRUE, 2);
 
-    // Create left panel (Connection, Control Signals, File Operations)
-    GtkWidget *left_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3); // Reduced spacing from 5 to 3
-    // Set minimum width for left panel but allow it to be responsive
-    gtk_widget_set_size_request(left_panel, 300, -1); // Reduced from 320 to 300
-    gtk_box_pack_start(GTK_BOX(main_hbox), left_panel, FALSE, FALSE, 15); // Reduced margin from 20 to 15
+    // Create scrolled window for left panel
+    GtkWidget *left_scrolled = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(left_scrolled),
+                                   GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    gtk_widget_set_size_request(left_scrolled, 300, -1);
+    gtk_box_pack_start(GTK_BOX(terminal->main_hbox), left_scrolled, FALSE, FALSE, 15);
 
-    // Create connection panel (upper left)
+    // Create left panel
+    GtkWidget *left_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
+    gtk_container_add(GTK_CONTAINER(left_scrolled), left_panel);
+
     create_connection_panel(terminal, left_panel);
-
-    // Create control signals panel (middle left)
     create_control_signals_panel(terminal, left_panel);
-
-    // Create file operations panel (bottom left)
     create_file_operations_panel(terminal, left_panel);
 
-    // Create macro panel (middle column)
+    // Create macro panel
     terminal->macro_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
-    gtk_widget_set_size_request(terminal->macro_panel, 200, -1); // Fixed width for macro buttons
-    gtk_box_pack_start(GTK_BOX(main_hbox), terminal->macro_panel, FALSE, FALSE, 10);
+    gtk_widget_set_size_request(terminal->macro_panel, 200, -1);
+    gtk_box_pack_start(GTK_BOX(terminal->main_hbox), terminal->macro_panel, FALSE, FALSE, 10);
     create_macro_panel(terminal, terminal->macro_panel);
 
-    // Create center panel (Data area and send controls) - responsive width
-    GtkWidget *center_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3); // Reduced spacing from 5 to 3
-    // Remove fixed width constraint to allow proper expansion
-    // gtk_widget_set_size_request(center_panel, 800, -1); // Removed fixed width
-    gtk_box_pack_start(GTK_BOX(main_hbox), center_panel, TRUE, TRUE, 15); // Reduced margin from 20 to 15
+    // Create center panel
+    GtkWidget *center_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
+    gtk_box_pack_start(GTK_BOX(terminal->main_hbox), center_panel, TRUE, TRUE, 15);
 
     // Create data area in center
     create_data_area(terminal, center_panel);
@@ -123,28 +120,23 @@ void create_main_interface(SerialTerminal *terminal) {
 
     terminal->stats_label = gtk_label_new("Sent: 0 | Received: 0 | Time: 00:00:00");
     gtk_box_pack_start(GTK_BOX(status_hbox), terminal->stats_label, FALSE, FALSE, 5);
-
-    // Debug: Check window size after UI is built
-    int width, height;
-    gtk_window_get_size(GTK_WINDOW(terminal->window), &width, &height);
-    printf("DEBUG: Window size after UI creation: %dx%d\n", width, height);
 }
 
 void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
     GtkWidget *frame = gtk_frame_new("Connection Settings");
-    gtk_box_pack_start(GTK_BOX(parent), frame, FALSE, FALSE, 5);
+    gtk_box_pack_start(GTK_BOX(parent), frame, FALSE, FALSE, 2);
 
     GtkWidget *grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(frame), grid);
-    gtk_container_set_border_width(GTK_CONTAINER(grid), 10);
-    gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
-    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+    gtk_container_set_border_width(GTK_CONTAINER(grid), 5);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 3);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
 
     int row = 0;
 
-    // Connection type selection
     gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Connection:"), 0, row, 1, 1);
     terminal->connection_type_combo = gtk_combo_box_text_new();
+    gtk_widget_set_size_request(terminal->connection_type_combo, -1, 28);
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo), "Serial");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo), "TCP Client");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->connection_type_combo), "TCP Server");
@@ -164,27 +156,28 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
     gtk_widget_set_no_show_all(terminal->network_settings_frame, TRUE); // Hidden by default
     row++;
 
-    // Create serial settings grid
     GtkWidget *serial_grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(terminal->serial_settings_frame), serial_grid);
-    gtk_container_set_border_width(GTK_CONTAINER(serial_grid), 10);
-    gtk_grid_set_row_spacing(GTK_GRID(serial_grid), 5);
-    gtk_grid_set_column_spacing(GTK_GRID(serial_grid), 10);
+    gtk_container_set_border_width(GTK_CONTAINER(serial_grid), 5);
+    gtk_grid_set_row_spacing(GTK_GRID(serial_grid), 2);
+    gtk_grid_set_column_spacing(GTK_GRID(serial_grid), 5);
 
     int serial_row = 0;
 
-    // Port selection
     gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Port:"), 0, serial_row, 1, 1);
     terminal->port_combo = gtk_combo_box_text_new();
+    gtk_widget_set_size_request(terminal->port_combo, -1, 28);
     gtk_grid_attach(GTK_GRID(serial_grid), terminal->port_combo, 1, serial_row, 1, 1);
 
     terminal->refresh_button = gtk_button_new_with_label("Refresh");
+    gtk_widget_set_size_request(terminal->refresh_button, -1, 28);
     gtk_grid_attach(GTK_GRID(serial_grid), terminal->refresh_button, 2, serial_row, 1, 1);
     serial_row++;
 
     // Baud rate
     gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Baud Rate:"), 0, serial_row, 1, 1);
     terminal->baudrate_combo = gtk_combo_box_text_new();
+    gtk_widget_set_size_request(terminal->baudrate_combo, -1, 28);
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->baudrate_combo), "300");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->baudrate_combo), "1200");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->baudrate_combo), "2400");
@@ -204,6 +197,7 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
     // Data bits
     gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Data Bits:"), 0, serial_row, 1, 1);
     terminal->databits_combo = gtk_combo_box_text_new();
+    gtk_widget_set_size_request(terminal->databits_combo, -1, 28);
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->databits_combo), "5");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->databits_combo), "6");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->databits_combo), "7");
@@ -215,6 +209,7 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
     // Parity
     gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Parity:"), 0, serial_row, 1, 1);
     terminal->parity_combo = gtk_combo_box_text_new();
+    gtk_widget_set_size_request(terminal->parity_combo, -1, 28);
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->parity_combo), "None");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->parity_combo), "Even");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->parity_combo), "Odd");
@@ -225,6 +220,7 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
     // Stop bits
     gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Stop Bits:"), 0, serial_row, 1, 1);
     terminal->stopbits_combo = gtk_combo_box_text_new();
+    gtk_widget_set_size_request(terminal->stopbits_combo, -1, 28);
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->stopbits_combo), "1");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->stopbits_combo), "2");
     gtk_combo_box_set_active(GTK_COMBO_BOX(terminal->stopbits_combo), 0); // 1
@@ -234,6 +230,7 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
     // Flow control
     gtk_grid_attach(GTK_GRID(serial_grid), gtk_label_new("Flow Control:"), 0, serial_row, 1, 1);
     terminal->flowcontrol_combo = gtk_combo_box_text_new();
+    gtk_widget_set_size_request(terminal->flowcontrol_combo, -1, 28);
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->flowcontrol_combo), "None");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->flowcontrol_combo), "Hardware");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(terminal->flowcontrol_combo), "Software");
@@ -244,15 +241,16 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
     // Create network settings grid
     GtkWidget *network_grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(terminal->network_settings_frame), network_grid);
-    gtk_container_set_border_width(GTK_CONTAINER(network_grid), 10);
-    gtk_grid_set_row_spacing(GTK_GRID(network_grid), 5);
-    gtk_grid_set_column_spacing(GTK_GRID(network_grid), 10);
+    gtk_container_set_border_width(GTK_CONTAINER(network_grid), 5);  // Reduced from 10 to 5
+    gtk_grid_set_row_spacing(GTK_GRID(network_grid), 2);  // Reduced from 5 to 2
+    gtk_grid_set_column_spacing(GTK_GRID(network_grid), 5);  // Reduced from 10 to 5
 
     int network_row = 0;
 
     // Host/IP address
     gtk_grid_attach(GTK_GRID(network_grid), gtk_label_new("Host/IP:"), 0, network_row, 1, 1);
     terminal->network_host_entry = gtk_entry_new();
+    gtk_widget_set_size_request(terminal->network_host_entry, -1, 28);
     gtk_entry_set_text(GTK_ENTRY(terminal->network_host_entry), "localhost");
     gtk_entry_set_placeholder_text(GTK_ENTRY(terminal->network_host_entry), "hostname or IP address");
     gtk_grid_attach(GTK_GRID(network_grid), terminal->network_host_entry, 1, network_row, 2, 1);
@@ -261,6 +259,7 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
     // Port
     gtk_grid_attach(GTK_GRID(network_grid), gtk_label_new("Port:"), 0, network_row, 1, 1);
     terminal->network_port_entry = gtk_entry_new();
+    gtk_widget_set_size_request(terminal->network_port_entry, -1, 28);
     gtk_entry_set_text(GTK_ENTRY(terminal->network_port_entry), "10110");
     gtk_entry_set_placeholder_text(GTK_ENTRY(terminal->network_port_entry), "1-65535");
     gtk_grid_attach(GTK_GRID(network_grid), terminal->network_port_entry, 1, network_row, 2, 1);
@@ -268,9 +267,11 @@ void create_connection_panel(SerialTerminal *terminal, GtkWidget *parent) {
 
     // Connection buttons (shared between serial and network)
     terminal->connect_button = gtk_button_new_with_label("Connect");
+    gtk_widget_set_size_request(terminal->connect_button, -1, 28);
     gtk_grid_attach(GTK_GRID(grid), terminal->connect_button, 0, row, 1, 1);
 
     terminal->disconnect_button = gtk_button_new_with_label("Disconnect");
+    gtk_widget_set_size_request(terminal->disconnect_button, -1, 28);
     gtk_widget_set_sensitive(terminal->disconnect_button, FALSE);
     gtk_grid_attach(GTK_GRID(grid), terminal->disconnect_button, 1, row, 2, 1);
 }
@@ -379,26 +380,27 @@ void create_appearance_panel(SerialTerminal *terminal, GtkWidget *parent) {
 
 void create_file_operations_panel(SerialTerminal *terminal, GtkWidget *parent) {
     GtkWidget *frame = gtk_frame_new("File Operations");
-    gtk_box_pack_start(GTK_BOX(parent), frame, FALSE, FALSE, 5);
+    gtk_box_pack_start(GTK_BOX(parent), frame, FALSE, FALSE, 2);  // Reduced from 5 to 2
 
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);  // Reduced from 5 to 3
     gtk_container_add(GTK_CONTAINER(frame), vbox);
-    gtk_container_set_border_width(GTK_CONTAINER(vbox), 10);
+    gtk_container_set_border_width(GTK_CONTAINER(vbox), 5);  // Reduced from 10 to 5
 
     // Send file section
     GtkWidget *send_file_frame = gtk_frame_new("Send File");
     gtk_box_pack_start(GTK_BOX(vbox), send_file_frame, FALSE, FALSE, 0);
 
-    GtkWidget *send_file_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
+    GtkWidget *send_file_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);  // Reduced from 3 to 2
     gtk_container_add(GTK_CONTAINER(send_file_frame), send_file_vbox);
-    gtk_container_set_border_width(GTK_CONTAINER(send_file_vbox), 5);
+    gtk_container_set_border_width(GTK_CONTAINER(send_file_vbox), 3);  // Reduced from 5 to 3
 
     terminal->send_file_button = gtk_button_new_with_label("Send File...");
+    gtk_widget_set_size_request(terminal->send_file_button, -1, 28);
     gtk_widget_set_sensitive(terminal->send_file_button, FALSE);
     gtk_box_pack_start(GTK_BOX(send_file_vbox), terminal->send_file_button, FALSE, FALSE, 0);
 
     // Repeat and Lines controls
-    GtkWidget *options_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    GtkWidget *options_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);  // Reduced from 10 to 5
     gtk_box_pack_start(GTK_BOX(send_file_vbox), options_hbox, FALSE, FALSE, 0);
 
     terminal->send_file_repeat_check = gtk_check_button_new_with_label("Repeat");
@@ -407,12 +409,13 @@ void create_file_operations_panel(SerialTerminal *terminal, GtkWidget *parent) {
     terminal->send_file_lines_check = gtk_check_button_new_with_label("Lines");
     gtk_box_pack_start(GTK_BOX(options_hbox), terminal->send_file_lines_check, FALSE, FALSE, 0);
 
-    GtkWidget *interval_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget *interval_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);  // Reduced from 5 to 3
     gtk_box_pack_start(GTK_BOX(send_file_vbox), interval_hbox, FALSE, FALSE, 0);
 
     gtk_box_pack_start(GTK_BOX(interval_hbox), gtk_label_new("Interval:"), FALSE, FALSE, 0);
 
     terminal->send_file_interval_combo = gtk_combo_box_text_new();
+    gtk_widget_set_size_request(terminal->send_file_interval_combo, -1, 28);
     gtk_box_pack_start(GTK_BOX(interval_hbox), terminal->send_file_interval_combo, TRUE, TRUE, 0);
 
     terminal->send_file_interval_label = gtk_label_new("sec");
@@ -422,27 +425,30 @@ void create_file_operations_panel(SerialTerminal *terminal, GtkWidget *parent) {
     populate_interval_dropdown_for_repeat(terminal);
 
     terminal->send_file_stop_button = gtk_button_new_with_label("Stop Repeat");
+    gtk_widget_set_size_request(terminal->send_file_stop_button, -1, 28);
     gtk_widget_set_sensitive(terminal->send_file_stop_button, FALSE);
     gtk_box_pack_start(GTK_BOX(send_file_vbox), terminal->send_file_stop_button, FALSE, FALSE, 0);
 
     // Logging operations
     terminal->log_file_button = gtk_toggle_button_new_with_label("Log to File");
+    gtk_widget_set_size_request(terminal->log_file_button, -1, 28);
     gtk_box_pack_start(GTK_BOX(vbox), terminal->log_file_button, FALSE, FALSE, 0);
 
     terminal->log_file_entry = gtk_entry_new();
+    gtk_widget_set_size_request(terminal->log_file_entry, -1, 28);
     gtk_entry_set_placeholder_text(GTK_ENTRY(terminal->log_file_entry), "Log file path...");
     gtk_box_pack_start(GTK_BOX(vbox), terminal->log_file_entry, FALSE, FALSE, 0);
 }
 
 void create_control_signals_panel(SerialTerminal *terminal, GtkWidget *parent) {
     GtkWidget *frame = gtk_frame_new("Control Signals");
-    gtk_box_pack_start(GTK_BOX(parent), frame, FALSE, FALSE, 5);
+    gtk_box_pack_start(GTK_BOX(parent), frame, FALSE, FALSE, 2);  // Reduced from 5 to 2
 
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);  // Reduced from 5 to 3
     gtk_container_add(GTK_CONTAINER(frame), vbox);
-    gtk_container_set_border_width(GTK_CONTAINER(vbox), 10);
+    gtk_container_set_border_width(GTK_CONTAINER(vbox), 5);  // Reduced from 10 to 5
 
-    GtkWidget *signals_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    GtkWidget *signals_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);  // Reduced from 10 to 5
     gtk_box_pack_start(GTK_BOX(vbox), signals_hbox, FALSE, FALSE, 0);
 
     terminal->dtr_check = gtk_check_button_new_with_label("DTR");
@@ -452,6 +458,7 @@ void create_control_signals_panel(SerialTerminal *terminal, GtkWidget *parent) {
     gtk_box_pack_start(GTK_BOX(signals_hbox), terminal->rts_check, FALSE, FALSE, 0);
 
     terminal->break_button = gtk_button_new_with_label("Send Break");
+    gtk_widget_set_size_request(terminal->break_button, -1, 28);
     gtk_widget_set_sensitive(terminal->break_button, FALSE);
     gtk_box_pack_start(GTK_BOX(vbox), terminal->break_button, FALSE, FALSE, 0);
 }
@@ -975,6 +982,10 @@ void show_macro_programming_dialog(SerialTerminal *terminal) {
 }
 
 void toggle_macro_panel_visibility(SerialTerminal *terminal) {
+    // Get current window size before toggling
+    int current_width, current_height;
+    gtk_window_get_size(GTK_WINDOW(terminal->window), &current_width, &current_height);
+
     if (terminal->macro_panel_visible) {
         // Hide the macro panel
         gtk_widget_hide(terminal->macro_panel);
@@ -984,6 +995,10 @@ void toggle_macro_panel_visibility(SerialTerminal *terminal) {
         gtk_widget_show(terminal->macro_panel);
         terminal->macro_panel_visible = TRUE;
     }
+
+    // Force window to maintain its current size
+    // This prevents the window from shrinking when macro panel is hidden
+    gtk_window_resize(GTK_WINDOW(terminal->window), current_width, current_height);
 
     // Save the visibility state
     save_settings(terminal);

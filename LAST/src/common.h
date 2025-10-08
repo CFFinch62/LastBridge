@@ -56,8 +56,7 @@ typedef enum {
 typedef struct {
     // Main window and layout
     GtkWidget *window;
-    GtkWidget *main_paned;
-    GtkWidget *notebook;
+    GtkWidget *main_hbox;
 
     // Menu bar
     GtkWidget *menu_bar;
