@@ -1,123 +1,10 @@
 /*
- * Serial communication module for LAST - Linux Advanced Serial Transceiver
- * Handles port detection, connection, configuration, and I/O
+ * Serial I/O module for LAST - Linux Advanced Serial Transceiver
+ * Handles connection, configuration, data I/O, and control signals
  */
 
 #include "serial.h"
 #include "scripting.h"
-
-void scan_all_serial_devices(GtkComboBoxText *combo) {
-    // Clear existing items
-    gtk_combo_box_text_remove_all(combo);
-    
-    // Add manual entry option
-    gtk_combo_box_text_append_text(combo, "Custom Path...");
-    
-    // Scan /dev/ and /tmp/ for all possible serial devices
-    const char *prefixes[] = {
-        "/dev/ttyS",     // Standard serial ports
-        "/dev/ttyUSB",   // USB serial adapters
-        "/dev/ttyACM",   // USB CDC ACM devices
-        "/dev/ttyV",     // Virtual devices (our null modem)
-        "/tmp/ttyV",     // PyVComm virtual devices
-        "/dev/pts/",     // PTY devices
-        "/dev/rfcomm",   // Bluetooth serial
-        NULL
-    };
-    
-    for (int prefix_idx = 0; prefixes[prefix_idx] != NULL; prefix_idx++) {
-        const char *prefix = prefixes[prefix_idx];
-        
-        // For pts, scan directory
-        if (strcmp(prefix, "/dev/pts/") == 0) {
-            DIR *dir = opendir("/dev/pts");
-            if (dir) {
-                struct dirent *entry;
-                while ((entry = readdir(dir)) != NULL) {
-                    if (entry->d_name[0] != '.' && strcmp(entry->d_name, "ptmx") != 0) {
-                        char path[256];
-                        snprintf(path, sizeof(path), "/dev/pts/%s", entry->d_name);
-                        if (is_serial_device(path)) {
-                            gtk_combo_box_text_append_text(combo, path);
-                        }
-                    }
-                }
-                closedir(dir);
-            }
-        } else {
-            // For other prefixes, try numbers 0-99
-            for (int i = 0; i < 100; i++) {
-                char path[256];
-                snprintf(path, sizeof(path), "%s%d", prefix, i);
-                
-                if (is_serial_device(path)) {
-                    gtk_combo_box_text_append_text(combo, path);
-                }
-            }
-        }
-    }
-    
-    // Scan for any other tty devices in /dev
-    DIR *dev_dir = opendir("/dev");
-    if (dev_dir) {
-        struct dirent *entry;
-        while ((entry = readdir(dev_dir)) != NULL) {
-            if (strncmp(entry->d_name, "tty", 3) == 0 && strlen(entry->d_name) > 3) {
-                char path[256];
-                snprintf(path, sizeof(path), "/dev/%s", entry->d_name);
-                
-                // Skip if already added
-                gboolean already_added = FALSE;
-                GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(combo));
-                GtkTreeIter iter;
-                if (gtk_tree_model_get_iter_first(model, &iter)) {
-                    do {
-                        gchar *existing_text;
-                        gtk_tree_model_get(model, &iter, 0, &existing_text, -1);
-                        if (existing_text && strcmp(existing_text, path) == 0) {
-                            already_added = TRUE;
-                            g_free(existing_text);
-                            break;
-                        }
-                        g_free(existing_text);
-                    } while (gtk_tree_model_iter_next(model, &iter));
-                }
-                
-                if (!already_added && is_serial_device(path)) {
-                    gtk_combo_box_text_append_text(combo, path);
-                }
-            }
-        }
-        closedir(dev_dir);
-    }
-}
-
-gboolean is_serial_device(const char *path) {
-    struct stat st;
-    
-    // Check if file exists
-    if (stat(path, &st) != 0) {
-        return FALSE;
-    }
-    
-    // Check if it's a character device
-    if (!S_ISCHR(st.st_mode)) {
-        return FALSE;
-    }
-    
-    // Try to open it (this is the real test)
-    int fd = open(path, O_RDWR | O_NOCTTY | O_NONBLOCK);
-    if (fd < 0) {
-        return FALSE;
-    }
-    
-    // Check if it supports termios (serial interface)
-    struct termios tio;
-    gboolean is_serial = (tcgetattr(fd, &tio) == 0);
-    
-    close(fd);
-    return is_serial;
-}
 
 void connect_serial(SerialTerminal *terminal) {
     const char *port = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(terminal->port_combo));
@@ -298,12 +185,16 @@ void *read_thread_func(void *arg) {
                     dual_data->text_data = format_data_for_display(display_data, display_length, FALSE); // Always format as text
                     dual_data->hex_data = format_data_for_display(display_data, display_length, TRUE);   // Always format as hex
                     dual_data->show_hex = terminal->hex_display;
+
+                    // Schedule UI update in main thread
                     g_idle_add(append_to_dual_display_idle, dual_data);
                 }
 
-                // Clean up script result
+                // Clean up script result if allocated
                 if (script_result) {
-                    scripting_free_result(script_result);
+                    if (script_result->result_data) free(script_result->result_data);
+                    if (script_result->error_message) free(script_result->error_message);
+                    free(script_result);
                 }
             }
         }
@@ -316,39 +207,31 @@ gboolean append_to_receive_text_idle(gpointer data) {
     char *text = (char *)data;
     if (g_terminal) {
         GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(g_terminal->receive_text));
-        GtkTextIter end;
-        gtk_text_buffer_get_end_iter(buffer, &end);
+        GtkTextIter end_iter;
+        gtk_text_buffer_get_end_iter(buffer, &end_iter);
 
         // Add timestamp if enabled
         if (g_terminal->show_timestamps) {
             char *timestamp = get_current_timestamp();
-            gtk_text_buffer_insert(buffer, &end, timestamp, -1);
-            gtk_text_buffer_insert(buffer, &end, " ", -1);
+            gtk_text_buffer_insert(buffer, &end_iter, timestamp, -1);
+            gtk_text_buffer_insert(buffer, &end_iter, " ", -1);
             free(timestamp);
         }
 
-        gtk_text_buffer_insert(buffer, &end, text, -1);
+        // Insert the text
+        gtk_text_buffer_insert(buffer, &end_iter, text, -1);
 
-        // In hex display mode, don't add extra newlines - show exactly what was received
-        // In text mode, only add newline if the text doesn't already end with one
-        if (!g_terminal->hex_display) {
-            size_t text_len = strlen(text);
-            if (text_len == 0 || text[text_len - 1] != '\n') {
-                gtk_text_buffer_insert(buffer, &end, "\n", -1);
-            }
-        } else {
-            // In hex mode, don't add any extra newlines - show raw hex data only
-            // Each received data chunk will be displayed as continuous hex without modification
-        }
-
-        // Auto-scroll to bottom if enabled
+        // Auto-scroll if enabled
         if (g_terminal->autoscroll) {
             GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
-            gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(g_terminal->receive_text), mark);
+            gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(g_terminal->receive_text), mark, 0.0, TRUE, 0.0, 1.0);
         }
     }
-    g_free(text);
-    return FALSE;
+
+    // Clean up
+    free(text);
+
+    return G_SOURCE_REMOVE;
 }
 
 gboolean append_to_dual_display_idle(gpointer data) {
@@ -376,8 +259,14 @@ gboolean append_to_dual_display_idle(gpointer data) {
             gtk_text_buffer_insert(text_buffer, &text_end, "\n", -1);
         }
 
-        // Update hex display if hex mode is enabled and hex display exists
-        if (dual_data->show_hex && g_terminal->hex_text) {
+        // Auto-scroll text view if enabled
+        if (g_terminal->autoscroll) {
+            GtkTextMark *mark = gtk_text_buffer_get_insert(text_buffer);
+            gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(g_terminal->receive_text), mark, 0.0, TRUE, 0.0, 1.0);
+        }
+
+        // Update hex display if visible
+        if (g_terminal->hex_frame && gtk_widget_get_visible(g_terminal->hex_frame)) {
             GtkTextBuffer *hex_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(g_terminal->hex_text));
             GtkTextIter hex_end;
             gtk_text_buffer_get_end_iter(hex_buffer, &hex_end);
@@ -386,32 +275,27 @@ gboolean append_to_dual_display_idle(gpointer data) {
             if (g_terminal->show_timestamps) {
                 char *timestamp = get_current_timestamp();
                 gtk_text_buffer_insert(hex_buffer, &hex_end, timestamp, -1);
-                gtk_text_buffer_insert(hex_buffer, &hex_end, " ", -1);
+                gtk_text_buffer_insert(hex_buffer, &hex_end, "\n", -1);
                 free(timestamp);
             }
 
             // Insert hex data
             gtk_text_buffer_insert(hex_buffer, &hex_end, dual_data->hex_data, -1);
-        }
 
-        // Auto-scroll both displays if enabled
-        if (g_terminal->autoscroll) {
-            GtkTextMark *text_mark = gtk_text_buffer_get_insert(text_buffer);
-            gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(g_terminal->receive_text), text_mark);
-
-            if (dual_data->show_hex && g_terminal->hex_text) {
-                GtkTextBuffer *hex_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(g_terminal->hex_text));
-                GtkTextMark *hex_mark = gtk_text_buffer_get_insert(hex_buffer);
-                gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(g_terminal->hex_text), hex_mark);
+            // Auto-scroll hex view if enabled
+            if (g_terminal->autoscroll) {
+                GtkTextMark *mark = gtk_text_buffer_get_insert(hex_buffer);
+                gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(g_terminal->hex_text), mark, 0.0, TRUE, 0.0, 1.0);
             }
         }
     }
 
-    // Free the data
+    // Clean up
     free(dual_data->text_data);
     free(dual_data->hex_data);
     free(dual_data);
-    return FALSE;
+
+    return G_SOURCE_REMOVE;
 }
 
 void append_to_receive_text(SerialTerminal *terminal, const char *text, gboolean is_received) {
@@ -657,3 +541,4 @@ void stop_signal_monitoring(SerialTerminal *terminal) {
         terminal->signal_update_timer_id = 0;
     }
 }
+

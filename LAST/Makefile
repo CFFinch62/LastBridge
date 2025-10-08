@@ -16,7 +16,7 @@ LUA_LIBS = $(LUA_LIB) -lm -ldl
 
 # Source files
 SRCDIR = src
-SOURCES = $(SRCDIR)/main.c $(SRCDIR)/serial.c $(SRCDIR)/network.c $(SRCDIR)/scripting.c $(SRCDIR)/ui.c $(SRCDIR)/file_ops.c $(SRCDIR)/utils.c $(SRCDIR)/callbacks.c $(SRCDIR)/settings.c
+SOURCES = $(SRCDIR)/main.c $(SRCDIR)/serial_detect.c $(SRCDIR)/serial_io.c $(SRCDIR)/network.c $(SRCDIR)/scripting.c $(SRCDIR)/ui_main.c $(SRCDIR)/ui_panels.c $(SRCDIR)/ui_display.c $(SRCDIR)/ui_macros.c $(SRCDIR)/file_ops.c $(SRCDIR)/utils.c $(SRCDIR)/callbacks_connection.c $(SRCDIR)/callbacks_data.c $(SRCDIR)/callbacks_display.c $(SRCDIR)/callbacks_menu.c $(SRCDIR)/callbacks_dialogs.c $(SRCDIR)/callbacks_macros.c $(SRCDIR)/callbacks_signals.c $(SRCDIR)/settings_load.c $(SRCDIR)/settings_save.c
 OBJECTS = $(SOURCES:.c=.o)
 HEADERS = $(SRCDIR)/common.h $(SRCDIR)/serial.h $(SRCDIR)/network.h $(SRCDIR)/scripting.h $(SRCDIR)/ui.h $(SRCDIR)/file_ops.h $(SRCDIR)/utils.h $(SRCDIR)/callbacks.h $(SRCDIR)/settings.h
 
